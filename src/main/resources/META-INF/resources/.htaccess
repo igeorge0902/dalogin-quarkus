@@ -1,0 +1,4 @@
+RewriteEngine On 
+RewriteCond %{SERVER_PORT} 80 
+RewriteRule ^(.*)$ https://milo.crabdance.com/$1 [R,L]
+php_value disable_functions fopen,shell_exec

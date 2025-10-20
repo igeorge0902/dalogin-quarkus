@@ -1,0 +1,11 @@
+^CMacBook-Pro:~ georgegaspar$ brew list
+==> Formulae
+autoconf		gcc			ios-deploy		libtasn1		mpfr			python@3.9
+automake		gd			isl			libtiff			node			readline
+azure-cli		gdbm			jpeg			libtool			openexr			sqlite
+ca-certificates		gmp			leptonica		libusb			openjdk			swiftformat
+carthage		gradle			libffi			libusbmuxd		openssl			tbb
+ddclient		htop			libimobiledevice	libxml2			openssl@1.1		tesseract
+eigen			icu4c			libmpc			libzip			pkg-config		xz
+fontconfig		ideviceinstaller	libplist		m4			python			yarn
+freetype		ilmbase			libpng			mpdecimal		python3			zstd

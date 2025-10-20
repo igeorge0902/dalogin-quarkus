@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="WebApp_ID"
+         version="3.1"
+         xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+         xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd">
+    <description>MySQL Test App</description>
+    <display-name>myapplication</display-name>
+    <context-param>
+        <param-name>DBPWD</param-name>
+        <param-value>sqluserpw</param-value>
+    </context-param>
+    <context-param>
+        <param-name>DBURL</param-name>
+        <param-value>${DB_URL}</param-value>
+    </context-param>
+    <!-- <distributable/>
+    DBManager -->
+    <context-param>
+        <param-name>DBUSER</param-name>
+        <param-value>sqluser</param-value>
+    </context-param>
+    <!-- Time -->
+    <context-param>
+        <param-name>TIME</param-name>
+        <param-value>8640000000</param-value>
+    </context-param>
+    <context-param>
+        <param-name>webApi2Context</param-name>
+        <param-value>/mbooks-1</param-value>
+    </context-param>
+    <context-param>
+        <param-name>webApi2ContextUrl</param-name>
+        <param-value>/rest/</param-value>
+    </context-param>
+    <context-param>
+        <param-name>webApiContext</param-name>
+        <param-value>/mbook-1</param-value>
+    </context-param>
+    <context-param>
+        <param-name>webApiContextUrl</param-name>
+        <param-value>/rest/user/</param-value>
+    </context-param>
+    <session-config>
+        <cookie-config>
+            <http-only>true</http-only>
+            <secure>true</secure>
+        </cookie-config>
+    </session-config>
+</web-app>

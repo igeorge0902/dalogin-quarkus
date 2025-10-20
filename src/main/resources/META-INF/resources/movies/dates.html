@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en" ng-app="ngRouteExample">
+
+<head>
+    <meta charset="UTF-8">
+
+</head>
+
+<body ng-controller="ExampleController">
+<br>
+<br>
+<div class="container" id="content">
+    <div class="row">
+        <section class="6u">
+            <ul>
+
+                <div class="animate-repeat" ng-repeat="data in dates | filter:q as results">
+                    <div class="container" id="content">
+                        <div class="row">
+                            <section class="6u">
+                                <ul>
+                                    <picture>
+                                        <a class="image full" href="#"><img alt=""
+                                                                            height="25%"
+                                                                            id="image_id_{{$index + 1}}" ng-src="../simple-service-webapp/webapi/myresource{{data.venues_picture}}" referrerpolicy="origin"
+                                                                            width="25%"></a>
+                                    </picture>
+
+                                </ul>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+                <ul>
+                    <br>
+                    <br>
+                    <form name="myForm">
+                        <label for="repeatSelect"> Select date: </label>
+                        <select id="repeatSelect" name="repeatSelect" ng-model="data.model">
+                            <option ng-repeat="option in dates" value="{{option.movieId}}">{{option.screeningDate}}
+                            </option>
+                        </select>
+                    </form>
+                </ul>
+            </ul>
+
+        </section>
+    </div>
+</div>
+<hr>
+<tt>model = {{data.model}}</tt>
+<br/>
+</body>
+
+</html>

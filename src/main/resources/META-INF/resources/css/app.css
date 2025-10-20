@@ -1,0 +1,36 @@
+* {
+    font-family: 'Open Sans', sans-serif;
+}
+
+.image {
+    position: relative;
+    padding: 5px;
+    width: 10px;
+    margin: auto;
+    margin-top: auto;
+}
+
+.angular-center-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    display: table;
+    pointer-events: none;
+}
+
+.angular-centered {
+    display: table-cell;
+    vertical-align: middle;
+    text-align: center;
+}
+
+/*
+h1{
+text-align: center;
+padding: 10px;
+font-size: 40px;
+color: #222;
+}*/
+ 
