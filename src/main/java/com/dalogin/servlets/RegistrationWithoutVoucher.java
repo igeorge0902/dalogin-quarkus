@@ -216,7 +216,7 @@ public class RegistrationWithoutVoucher extends HttpServlet implements Serializa
                                         json.put("JSESSIONID", sessionID);
                                         // this is necessary because the X-Token header did not appear in the native mobile app
                                         json.put("X-Token", token2);
-                                        response.sendRedirect(otherContext.getContextPath() + "/tabularasa.jsp?JSESSIONID=" + sessionID);
+                                        response.sendRedirect(otherContext.getContextPath() + "/tabularasa.html?JSESSIONID=" + sessionID);
                                     } catch (Exception e) {
                                         throw new ServletException(e.getCause().toString());
                                     }

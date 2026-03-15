@@ -1,5 +1,6 @@
 package com.dalogin.utils;
 
+import com.dalogin.SystemConstants;
 import org.apache.commons.io.IOUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -38,9 +39,9 @@ public class test {
         //	System.out.println(test.split("\\.")[0].toString());
         Class.forName("com.mysql.cj.jdbc.Driver");
         Connection con = DriverManager.getConnection("jdbc:mysql://localhost:3306", "sqluser", "sqluserpw-1982");
-        con.setCatalog("login");
+        con.setCatalog(SystemConstants.DB_CATALOG);
         con.setAutoCommit(true);
-        System.out.print("dB Connection created, catalog set to \"login\"");
+        System.out.print("dB Connection created, catalog set to \"" + SystemConstants.DB_CATALOG + "\"");
         String[] params_ = query_.split("&");
         Map<String, String> queryMap = new HashMap<String, String>();
         String user = "";

@@ -253,7 +253,7 @@ myRegController.controller('RegController', function ($scope, $http, base64, $lo
                     window.location.href = '/example/main.html';
                 } else if (localStorage.M) {
                     //
-                    window.location.href = '/example/tabularasa.jsp';
+                    window.location.href = '/example/tabularasa.html';
                 } else {
                     //
                     console.log(data);

@@ -88,12 +88,29 @@ public class HelloWorld extends HttpServlet implements Serializable {
       //  final long T2 = Long.parseLong(context.getAttribute("time").toString());
 
         // Extract headers/parameters
-        hmac = request.getHeader("X-HMAC-HASH").trim();
-        contentLength = request.getHeader("Content-Length").trim();
-        time = request.getHeader("X-MICRO-TIME").trim();
-        pass = request.getParameter("pswrd").trim();
-        user = request.getParameter("user").trim();
-        deviceId = request.getParameter("deviceId").trim();
+        String rawHmac = request.getHeader("X-HMAC-HASH");
+        String rawContentLength = request.getHeader("Content-Length");
+        String rawTime = request.getHeader("X-MICRO-TIME");
+        String rawPass = request.getParameter("pswrd");
+        String rawUser = request.getParameter("user");
+        String rawDeviceId = request.getParameter("deviceId");
+
+        if (rawHmac == null || rawContentLength == null || rawTime == null
+                || rawPass == null || rawUser == null || rawDeviceId == null) {
+            response.setStatus(502);
+            JSONObject err = new JSONObject();
+            err.put("Success", "false");
+            err.put("Message", "Missing required headers or parameters");
+            writeJson(response, err);
+            return;
+        }
+
+        hmac = rawHmac.trim();
+        contentLength = rawContentLength.trim();
+        time = rawTime.trim();
+        pass = rawPass.trim();
+        user = rawUser.trim();
+        deviceId = rawDeviceId.trim();
         ios = request.getParameter("ios");
         webView = request.getHeader("User-Agent");
         M = request.getHeader("M");
@@ -170,7 +187,7 @@ public class HelloWorld extends HttpServlet implements Serializable {
             SQLAccess.insertDevice(deviceId, user, context);
             SQLAccess.insertSessionCreated(deviceId, sessionCreated, sessionID, context);
         } catch (Exception e) {
-            throw new ServletException(e.getCause().toString());
+            throw new ServletException(e.getCause() != null ? e.getCause().toString() : e.getMessage(), e);
         }
 
         session.setMaxInactiveInterval(30 * 60);
@@ -210,7 +227,7 @@ public class HelloWorld extends HttpServlet implements Serializable {
             writeJson(response, json);
 
         } catch (Exception e) {
-            throw new ServletException(e.getCause().toString());
+            throw new ServletException(e.getCause() != null ? e.getCause().toString() : e.getMessage(), e);
         }
     }
 

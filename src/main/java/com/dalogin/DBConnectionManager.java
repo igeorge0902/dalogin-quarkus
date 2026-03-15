@@ -62,9 +62,10 @@ public class DBConnectionManager {
     public Connection getConnection() throws SQLException, ClassNotFoundException {
         Class.forName("com.mysql.cj.jdbc.Driver");
         con = DriverManager.getConnection(dbURL, user, password);
-        con.setCatalog("login_");
+        String catalog = SystemConstants.DB_CATALOG;
+        con.setCatalog(catalog);
         con.setAutoCommit(true);
-        log.info("dB Connection created, catalog set to \"login\"");
+        log.info("dB Connection created, catalog set to \"" + catalog + "\"");
         return this.con;
     }
 

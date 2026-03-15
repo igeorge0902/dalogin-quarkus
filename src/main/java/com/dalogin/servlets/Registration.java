@@ -211,7 +211,7 @@ public class Registration extends HttpServlet implements Serializable {
                                     json.put("X-Token", token2.get(0));
                                     String homePage = getServletContext().getInitParameter("homePage");
                                     //ServletContext otherContext = getServletContext().getContext(homePage);
-                                    response.sendRedirect(context.getContextPath() + "/tabularasa.jsp?JSESSIONID=" + sessionID);
+                                    response.sendRedirect(context.getContextPath() + "/tabularasa.html?JSESSIONID=" + sessionID);
                                 } catch (Exception e) {
                                     throw new ServletException(e.getCause().toString());
                                 }

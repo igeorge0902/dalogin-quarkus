@@ -184,7 +184,7 @@ hmacApp.controller('LoginController', function ($scope, $http, base64, $location
                 // We check only if localStorage.M = headersGetter()['M'] is an object. That's fine.
             } else if (localStorage.M) {
                 //
-                window.location.href = '/login/tabularasa.jsp';
+                window.location.href = '/login/tabularasa.html';
             } else {
                 // 
                 $scope.errorMsg = data;
