@@ -1,44 +1,33 @@
-<!doctype html>
-<html lang="en" ng-app="ngRouteExample">
-
-<head>
-    <meta charset="UTF-8">
-
-    <link href="css/animation.css" rel="stylesheet" type="text/css">
-
-</head>
-
-<body ng-controller="BookController">
-
-<div class="container" id="content">
-    <div class="row">
-        <section class="6u">
-            <br> List of venues
-            <input aria-label="filter venues" ng-model="q" placeholder="filter venues..." type="search"/>
-            <div class="animate-repeat" ng-repeat="location in locations | filter:q as results">
-                <div class="container" id="content">
-                    <div class="row">
-                        <section class="6u">
-                            <ul>
-                                <picture>
-                                    <a class="image full"
-                                       href="mbooks-1/rest/book/dates/{{location.locationId}}/{{$routeParams.bookId}}"><img alt=""
-                                                               height="50%"
-                                                               id="image_id_{{$index + 1}}" ng-src="../simple-service-webapp/webapi/myresource{{location.thumbnail}}" referrerpolicy="origin" width="50%"></a>
-                                </picture>
-                                <header>
-                                    <h2>[{{$index + 1}}] Venues: {{locations.name}}</h2>
-                                </header>
-
-                                <details>
-                                    "hello"
-                                </details>
-                            </ul>
-                        </section>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </div>
+<div class="breadcrumb">
+    <a href="/login/left-sidebar.html">Movies</a>
+    <span class="sep">›</span>
+    <span class="current">Select Venue</span>
 </div>
-</body>
+
+<div class="page-header" style="padding-top:10px;">
+    <h2>Choose a Venue</h2>
+    <p>Pick a cinema location to see available screenings.</p>
+</div>
+
+<div class="filter-bar">
+    <input type="search" ng-model="q" placeholder="Filter venues..." aria-label="filter venues">
+</div>
+
+<div class="venue-grid">
+    <a class="venue-card"
+       ng-repeat="location in locations | filter:q as results"
+       ng-href="mbooks-1/rest/book/dates/{{location.locationId}}/{{$routeParams.bookId}}">
+        <img class="venue-img"
+             ng-src="../simple-service-webapp/webapi/myresource{{location.thumbnail}}"
+             alt="{{location.name}}"
+             referrerpolicy="origin">
+        <div class="venue-info">
+            <h3>{{location.name}}</h3>
+        </div>
+    </a>
+</div>
+
+<div class="empty-state" ng-if="results.length === 0 && q">
+    <h3>No venues found</h3>
+    <p>Try a different search term.</p>
+</div>

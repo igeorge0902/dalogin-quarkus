@@ -89,7 +89,7 @@ myAppControllers.controller('GetUser', ['$scope', 'userApi', function ($scope, u
         return loading;
     }
 
-    $scope.user = [];
+    $scope.user = {};
     $scope.errorMessage = '';
     $scope.successMessage = '';
     $scope.isLoading = isLoading;
@@ -97,10 +97,9 @@ myAppControllers.controller('GetUser', ['$scope', 'userApi', function ($scope, u
 
     function refreshUser() {
         loading = true;
-        $scope.user = [];
+        $scope.user = {};
         $scope.errorMessage = '';
         $scope.successMessage = '';
-        // $scope.refreshUser = refreshUser;
 
         var keySize = 128;
         var iterationCount = 1000;
@@ -115,26 +114,20 @@ myAppControllers.controller('GetUser', ['$scope', 'userApi', function ($scope, u
 
         userApi.getUser()
             .success(function (data, status, headers) {
-                // console.log(headers());
-                $scope.user = null;
                 $scope.user = data;
                 $scope.status = status;
                 $scope.successMessage = "Hello!";
                 loading = false;
-
-
             })
             .error(function (status) {
                 $scope.errorMessage = "Error!";
                 $scope.status = status;
                 loading = false;
-                // This section uses the directives.js to display the modal in main.html. This modal doesn't use controller.
-                $scope.showModal = true;
-                $scope.toggleModal = function () {
-                    $scope.showModal = !$scope.showModal;
-                };
             });
     }
+
+    // Auto-fetch profile on page load
+    refreshUser();
 }]);
 
 myAppControllers.controller('LogOut', ['$scope', 'logoutApi', function ($scope, logoutApi) {

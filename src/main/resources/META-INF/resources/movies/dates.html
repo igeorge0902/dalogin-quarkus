@@ -1,55 +1,74 @@
-<!doctype html>
-<html lang="en" ng-app="ngRouteExample">
-
-<head>
-    <meta charset="UTF-8">
-
-</head>
-
-<body ng-controller="ExampleController">
-<br>
-<br>
-<div class="container" id="content">
-    <div class="row">
-        <section class="6u">
-            <ul>
-
-                <div class="animate-repeat" ng-repeat="data in dates | filter:q as results">
-                    <div class="container" id="content">
-                        <div class="row">
-                            <section class="6u">
-                                <ul>
-                                    <picture>
-                                        <a class="image full" href="#"><img alt=""
-                                                                            height="25%"
-                                                                            id="image_id_{{$index + 1}}" ng-src="../simple-service-webapp/webapi/myresource{{data.venues_picture}}" referrerpolicy="origin"
-                                                                            width="25%"></a>
-                                    </picture>
-
-                                </ul>
-                            </section>
-                        </div>
-                    </div>
-                </div>
-                <ul>
-                    <br>
-                    <br>
-                    <form name="myForm">
-                        <label for="repeatSelect"> Select date: </label>
-                        <select id="repeatSelect" name="repeatSelect" ng-model="data.model">
-                            <option ng-repeat="option in dates" value="{{option.movieId}}">{{option.screeningDate}}
-                            </option>
-                        </select>
-                    </form>
-                </ul>
-            </ul>
-
-        </section>
-    </div>
+<!-- dates.html — AngularJS route template: date selection + seat map -->
+<div class="breadcrumb">
+    <a href="/login/left-sidebar.html">Movies</a>
+    <span class="sep">›</span>
+    <a href="#" ng-click="$event.preventDefault()">Venues</a>
+    <span class="sep">›</span>
+    <span class="current">Select Date &amp; Seats</span>
 </div>
-<hr>
-<tt>model = {{data.model}}</tt>
-<br/>
-</body>
 
-</html>
+<div class="dates-section">
+
+    <!-- Venue image preview -->
+    <div class="venue-hero" ng-if="dates.length > 0">
+        <img ng-src="../simple-service-webapp/webapi/myresource{{dates[0].venues_picture}}"
+             alt="Venue"
+             referrerpolicy="origin">
+    </div>
+
+    <!-- Date picker -->
+    <div class="date-picker-group">
+        <label for="repeatSelect">Select a screening date:</label>
+        <select id="repeatSelect"
+                ng-model="data.model"
+                ng-change="selectedItemChanged()">
+            <option value="">— Choose date —</option>
+            <option ng-repeat="option in dates"
+                    value="{{option.movieId}}">{{option.screeningDate}}</option>
+        </select>
+    </div>
+
+    <!-- Seat map (visible after date is selected and seats are loaded) -->
+    <div class="seat-map" ng-if="seats.length > 0">
+        <h3>Select Your Seats</h3>
+        <div class="screen-indicator">screen</div>
+
+        <div ng-repeat="seat in seats">
+            <div class="seat-row">
+                <div class="seat"
+                     ng-class="{'available': seat.isReserved !== '1' && !seat.selected,
+                                'reserved': seat.isReserved === '1',
+                                'selected': seat.selected}"
+                     ng-click="toggleSeat(seat)"
+                     title="Row {{seat.seatRow}} – Seat {{seat.seatNumber}}">
+                    {{seat.seatRow}}{{seat.seatNumber}}
+                </div>
+            </div>
+        </div>
+
+        <div class="seat-legend">
+            <span><span class="dot avail"></span> Available</span>
+            <span><span class="dot sel"></span> Selected</span>
+            <span><span class="dot res"></span> Reserved</span>
+        </div>
+
+        <!-- Proceed to checkout -->
+        <div style="text-align:center; margin-top:28px;" ng-if="getSelectedSeats().length > 0">
+            <p style="color:var(--grey-500); margin-bottom:12px; font-weight:500;">
+                {{getSelectedSeats().length}} seat(s) selected &middot;
+                ${{getSelectedSeats().length * 10}}.00
+            </p>
+            <button class="btn btn-green" ng-click="proceedToCheckout()">
+                Proceed to Checkout
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading state -->
+    <div class="loading" ng-if="data.model && seats.length === 0 && !seatsError">
+        <div class="spinner"></div>
+        <p>Loading seats...</p>
+    </div>
+
+</div>
+
