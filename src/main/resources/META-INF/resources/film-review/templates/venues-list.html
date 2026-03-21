@@ -1,0 +1,58 @@
+<!-- venues-list.html — Browse all cinema locations -->
+<div class="hero common-hero">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="hero-ct">
+                    <h1>Our Cinemas</h1>
+                    <ul class="breadcumb">
+                        <li class="active"><a href="#!/">Movies</a></li>
+                        <li><span class="ion-ios-arrow-right"></span> Venues</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-single" ng-if="!loading && !error">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <div class="topbar-filter" ng-if="locations.length > 0">
+                    <p>Found <span>{{locations.length}} cinema(s)</span></p>
+                </div>
+
+                <div class="row" ng-if="locations.length > 0">
+                    <div class="col-md-6 col-sm-6" ng-repeat="loc in locations">
+                        <a class="venue-card" ng-href="#!/venue-movies/{{loc.locationId}}">
+                            <img ng-src="{{imgBase}}{{loc.thumbnail}}" alt="{{loc.name}}"
+                                 onerror="this.src='images/logo1.png'">
+                            <div class="info">
+                                <h5>{{loc.name}}</h5>
+                                <p>{{loc.formatted_address}}</p>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="empty-state" ng-if="locations.length === 0">
+                    <h3>No cinemas found</h3>
+                    <p><a href="#!/" style="color:#dcf836;">← Browse Movies</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="loading-msg" ng-if="loading">
+    <div class="spinner"></div>
+    <p>Loading cinemas...</p>
+</div>
+
+<div class="empty-state" ng-if="error">
+    <h3>Unable to load cinemas</h3>
+    <p><a href="#!/" style="color:#dcf836;">← Browse Movies</a></p>
+</div>
+
+

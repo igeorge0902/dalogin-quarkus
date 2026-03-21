@@ -1,0 +1,78 @@
+<!-- venue-movies.html — Movies screening at a selected cinema -->
+<div class="hero common-hero">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="hero-ct">
+                    <h1>Now Screening at {{venueName}}</h1>
+                    <ul class="breadcumb">
+                        <li class="active"><a href="#!/">Movies</a></li>
+                        <li><span class="ion-ios-arrow-right"></span> <a href="#!/venues-list" style="color:#abb7c4;">Venues</a></li>
+                        <li><span class="ion-ios-arrow-right"></span> {{venueName}}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-single" ng-if="!loading && !error">
+    <div class="container">
+        <div class="row ipad-width">
+            <div class="col-md-12">
+
+                <!-- Venue header -->
+                <div style="text-align:center; margin-bottom:24px;" ng-if="venuePicture">
+                    <img ng-src="{{imgBase}}{{venuePicture}}" alt="{{venueName}}"
+                         style="width:100%; max-height:220px; object-fit:cover; border-radius:8px;"
+                         onerror="this.style.display='none'">
+                </div>
+
+                <div class="topbar-filter" ng-if="movies.length > 0">
+                    <p>Found <span>{{movies.length}} movie(s)</span> screening at this venue</p>
+                </div>
+
+                <div class="flex-wrap-movielist" ng-if="movies.length > 0">
+                    <div class="movie-item-style-2 movie-item-style-1"
+                         ng-repeat="movie in movies track by movie.movieId"
+                         ng-click="go('/dates/' + locationId + '/' + movie.movieId)" style="cursor:pointer;">
+                        <img ng-src="{{imgBase}}{{movie.large_picture}}" alt="{{movie.name}}"
+                             onerror="this.src='images/logo1.png'">
+                        <div class="hvr-inner">
+                            <a href="">
+                                Book Now <i class="ion-android-arrow-dropright"></i>
+                            </a>
+                        </div>
+                        <div class="mv-item-infor">
+                            <h6><a ng-href="{{movie.iMDB_url}}" target="_blank"
+                                   style="color:#fff;">{{movie.name}}</a></h6>
+                            <p class="rate" style="font-size:11px; color:#abb7c4; margin-top:4px;">
+                                {{movie.detail | limitTo:90}}{{movie.detail.length > 90 ? '...' : ''}}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="empty-state" ng-if="movies.length === 0">
+                    <h3>No movies currently screening</h3>
+                    <p>This cinema has no active screenings at the moment.</p>
+                    <a href="#!/venues-list" class="btn-book" style="display:inline-block; margin-top:16px; text-decoration:none;">
+                        ← Back to Venues
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="loading-msg" ng-if="loading">
+    <div class="spinner"></div>
+    <p>Loading movies...</p>
+</div>
+
+<div class="empty-state" ng-if="error">
+    <h3>Error loading movies</h3>
+    <p><a href="#!/venues-list" style="color:#dcf836;">← Back to Venues</a></p>
+</div>
+
+

@@ -1,0 +1,64 @@
+<!-- login.html — Film-Review in-app login -->
+<div class="hero common-hero">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="hero-ct">
+                    <h1>Log In</h1>
+                    <ul class="breadcumb">
+                        <li class="active"><a href="#!/">Home</a></li>
+                        <li><span class="ion-ios-arrow-right"></span> Login</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-single">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4 col-md-offset-4">
+                <div class="login-wrap">
+
+                    <!-- Already logged in -->
+                    <div class="alert-ok" ng-if="loggedIn" style="text-align:center;">
+                        <p style="margin:0;">You are logged in as <strong>{{loggedInUser}}</strong>.</p>
+                        <p style="margin:8px 0 0;">
+                            <a href="#!/purchases" style="color:#020d18; font-weight:600;">My Purchases</a>
+                            &nbsp;&middot;&nbsp;
+                            <a href="#!/" style="color:#020d18; font-weight:600;">Browse Movies</a>
+                        </p>
+                    </div>
+
+                    <!-- Login form -->
+                    <form novalidate ng-if="!loggedIn" ng-submit="login()">
+                        <div class="login-field">
+                            <label style="color:#abb7c4; display:block; margin-bottom:4px;">Username</label>
+                            <input type="text" ng-model="credentials.username" placeholder="Enter username"
+                                   class="date-select" style="margin:0 0 14px;" autocomplete="username" autofocus>
+                        </div>
+                        <div class="login-field">
+                            <label style="color:#abb7c4; display:block; margin-bottom:4px;">Password</label>
+                            <input type="password" ng-model="credentials.password" placeholder="Enter password"
+                                   class="date-select" style="margin:0 0 18px;" autocomplete="current-password">
+                        </div>
+
+                        <div class="alert-err" ng-if="errorMsg" style="margin-bottom:14px;">{{errorMsg}}</div>
+
+                        <button type="submit" class="btn-book" style="width:100%;"
+                                ng-disabled="processing || !credentials.username || !credentials.password">
+                            <span ng-if="!processing">Log In</span>
+                            <span ng-if="processing">Logging in...</span>
+                        </button>
+                    </form>
+
+                    <div style="text-align:center; margin-top:20px;">
+                        <a href="/login/register.html" style="color:#dcf836; font-size:13px;">Don't have an account? Sign Up</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

@@ -160,6 +160,13 @@ public class CustomHttpSessionListener extends HttpServlet implements HttpSessio
     @SuppressWarnings("unchecked")
     @Override
     public void attributeAdded(HttpSessionBindingEvent se) {
+        // Quarkus CDI may store internal objects (e.g. ComputingCache) as session attributes;
+        // skip processing for non-String values to avoid ClassCastException.
+        if (!(se.getValue() instanceof String)) {
+            log.info("Skipping non-String session attribute: " + se.getName()
+                    + " (type: " + se.getValue().getClass().getName() + ")");
+            return;
+        }
         HttpSession session = se.getSession();
         ServletContext context = session.getServletContext();
         activeUsers = (ConcurrentHashMap<String, HttpSession>) context.getAttribute("activeUsers");
@@ -192,6 +199,13 @@ public class CustomHttpSessionListener extends HttpServlet implements HttpSessio
     /** Session attribute changes **/
     @Override
     public void attributeRemoved(HttpSessionBindingEvent se) {
+        // Quarkus CDI may store internal objects as session attributes;
+        // skip processing for non-String values to avoid ClassCastException.
+        if (!(se.getValue() instanceof String)) {
+            log.info("Skipping non-String session attribute removal: " + se.getName()
+                    + " (type: " + se.getValue().getClass().getName() + ")");
+            return;
+        }
         HttpSession session = se.getSession();
         id = session.getId();
         name = se.getName();

@@ -1,0 +1,72 @@
+<!-- purchases.html — Purchase history -->
+<div class="hero common-hero">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="hero-ct">
+                    <h1>My Purchases</h1>
+                    <ul class="breadcumb">
+                        <li class="active"><a href="#!/">Movies</a></li>
+                        <li><span class="ion-ios-arrow-right"></span> Purchases</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-single" ng-if="!loading && !error">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <div class="topbar-filter" ng-if="purchases.length > 0">
+                    <p>Found <span>{{purchases.length}} purchase(s)</span></p>
+                </div>
+
+                <div class="purchase-list" ng-if="purchases.length > 0">
+                    <div class="purchase-card" ng-repeat="p in purchases track by p.purchaseId">
+                        <div class="purchase-poster">
+                            <img ng-src="{{imgBase}}{{p.movie_picture}}" alt="{{p.movie_name}}"
+                                 onerror="this.src='images/logo1.png'">
+                        </div>
+                        <div class="purchase-info">
+                            <h5>{{p.movie_name}}</h5>
+                            <p><i class="ion-ios-location"></i> {{p.venue_name}}</p>
+                            <p><i class="ion-ios-calendar"></i> {{p.screeningDate}}</p>
+                            <p class="purchase-meta">Order #{{p.orderId}} &middot; {{p.purchaseDate}}</p>
+                            <div class="purchase-actions">
+                                <a ng-href="#!/purchases/{{p.purchaseId}}" class="btn-detail">
+                                    View Tickets
+                                </a>
+                                <button class="btn-delete" ng-click="deletePurchase(p.purchaseId)">
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="empty-state" ng-if="purchases.length === 0">
+                    <h3>No purchases yet</h3>
+                    <p>Browse movies and book your first screening!</p>
+                    <a href="#!/" class="btn-book" style="display:inline-block; margin-top:16px; text-decoration:none;">
+                        ← Browse Movies
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="loading-msg" ng-if="loading">
+    <div class="spinner"></div>
+    <p>Loading purchases...</p>
+</div>
+
+<div class="empty-state" ng-if="error">
+    <h3>Unable to load purchases</h3>
+    <p>Please make sure you are <a href="/login/" style="color:#dcf836;">logged in</a>.</p>
+    <p><a href="#!/" style="color:#dcf836;">← Browse Movies</a></p>
+</div>
+
+

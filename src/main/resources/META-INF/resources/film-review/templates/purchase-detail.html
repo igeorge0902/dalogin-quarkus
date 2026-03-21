@@ -1,0 +1,94 @@
+<!-- purchase-detail.html — Tickets for a purchase with cancel option -->
+<div class="hero common-hero">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="hero-ct">
+                    <h1>Purchase #{{purchaseId}}</h1>
+                    <ul class="breadcumb">
+                        <li class="active"><a href="#!/">Movies</a></li>
+                        <li><span class="ion-ios-arrow-right"></span> <a href="#!/purchases" style="color:#abb7c4;">Purchases</a></li>
+                        <li><span class="ion-ios-arrow-right"></span> Tickets</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-single" ng-if="!loading && !error">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+
+                <!-- Movie banner (from first ticket) -->
+                <div style="text-align:center; margin-bottom:20px;" ng-if="tickets.length > 0">
+                    <img ng-src="{{imgBase}}{{tickets[0].movie_picture}}" alt="{{tickets[0].movie_name}}"
+                         style="width:100%; max-height:220px; object-fit:cover; border-radius:8px;"
+                         onerror="this.style.display='none'">
+                    <h4 style="color:#fff; margin-top:12px;">{{tickets[0].movie_name}}</h4>
+                    <p style="color:#abb7c4;">
+                        {{tickets[0].venue_name}} &middot; {{tickets[0].screening_date}}
+                    </p>
+                </div>
+
+                <!-- Messages -->
+                <div class="alert-ok" ng-if="cancelSuccess">{{cancelSuccess}}</div>
+                <div class="alert-err" ng-if="cancelError">{{cancelError}}</div>
+
+                <div class="topbar-filter" ng-if="tickets.length > 0">
+                    <p><span>{{tickets.length}} ticket(s)</span></p>
+                </div>
+
+                <!-- Ticket list -->
+                <div class="ticket-list" ng-if="tickets.length > 0">
+                    <div class="ticket-card" ng-repeat="t in tickets track by t.ticketId"
+                         ng-class="{'ticket-selected': t.selected}"
+                         ng-click="toggleTicket(t)" style="cursor:pointer;">
+                        <div class="ticket-seat">
+                            <span class="seat-label">{{t.seats_seatNumber}}</span>
+                            <span class="seat-row-info">Row {{t.seats_seatRow}}</span>
+                        </div>
+                        <div class="ticket-info">
+                            <p>Ticket #{{t.ticketId}}</p>
+                            <p class="ticket-price">${{t.price}}</p>
+                        </div>
+                        <div class="ticket-check">
+                            <span ng-if="t.selected" style="color:#dcf836; font-size:20px;">&#10003;</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cancel action -->
+                <div class="booking-summary" ng-if="getSelectedTickets().length > 0">
+                    <p>{{getSelectedTickets().length}} ticket(s) selected for cancellation</p>
+                    <button class="btn-book" style="background:#e94560;" ng-click="cancelSelected()">
+                        Cancel Selected Tickets
+                    </button>
+                </div>
+
+                <div class="empty-state" ng-if="tickets.length === 0">
+                    <h3>No tickets found</h3>
+                    <p><a href="#!/purchases" style="color:#dcf836;">← Back to Purchases</a></p>
+                </div>
+
+                <div style="text-align:center; margin-top:24px;">
+                    <a href="#!/purchases" style="color:#abb7c4;">← Back to Purchases</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="loading-msg" ng-if="loading">
+    <div class="spinner"></div>
+    <p>Loading tickets...</p>
+</div>
+
+<div class="empty-state" ng-if="error">
+    <h3>Unable to load tickets</h3>
+    <p>Please make sure you are <a href="/login/" style="color:#dcf836;">logged in</a>.</p>
+    <p><a href="#!/purchases" style="color:#dcf836;">← Back to Purchases</a></p>
+</div>
+
+

@@ -29,7 +29,7 @@ public interface Purchases {
     @POST
     @Path("/book/deletepurchases")
     @Produces(MediaType.APPLICATION_JSON)
-    @Consumes(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     Response deletePurchases(
             @FormParam("purchaseId") String purchaseId
             );

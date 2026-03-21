@@ -1,0 +1,65 @@
+<!-- venues.html — Venue/location selection -->
+<div class="hero common-hero">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="hero-ct">
+                    <h1>Select Venue</h1>
+                    <ul class="breadcumb">
+                        <li class="active"><a href="#!/">Movies</a></li>
+                        <li><span class="ion-ios-arrow-right"></span> Venues</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-single" ng-if="!loading && !error">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <div class="topbar-filter" ng-if="locations.length > 0">
+                    <p>Found <span>{{locations.length}} venue(s)</span> for this movie</p>
+                </div>
+
+                <div class="row" ng-if="locations.length > 0">
+                    <div class="col-md-6 col-sm-6" ng-repeat="loc in locations">
+                        <a class="venue-card" ng-href="#!/dates/{{loc.locationId}}/{{movieId}}">
+                            <img ng-src="{{imgBase}}{{loc.thumbnail}}" alt="{{loc.name}}"
+                                 onerror="this.src='images/logo1.png'">
+                            <div class="info">
+                                <h5>{{loc.name}}</h5>
+                                <p>{{loc.formatted_address}}</p>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="empty-state" ng-if="locations.length === 0">
+                    <h3>No venues available</h3>
+                    <p>This movie is not currently screening at any venue.</p>
+                    <a href="#!/" class="btn-book" style="display:inline-block; margin-top:16px; text-decoration:none;">
+                        ← Back to Movies
+                    </a>
+                </div>
+
+                <!-- Back navigation -->
+                <div style="text-align:center; margin-top:30px; padding-bottom:30px;" ng-if="locations.length > 0">
+                    <a href="#!/" style="color:#abb7c4;">← Back to Movies</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="loading-msg" ng-if="loading">
+    <div class="spinner"></div>
+    <p>Loading venues...</p>
+</div>
+
+<div class="empty-state" ng-if="error">
+    <h3>Error loading venues</h3>
+    <p><a href="#!/" style="color:#dcf836;">← Back to Movies</a></p>
+</div>
+

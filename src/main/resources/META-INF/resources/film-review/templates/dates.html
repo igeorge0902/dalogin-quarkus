@@ -1,0 +1,125 @@
+<!-- dates.html — Date selection + seat map + basket (mirrors iOS PopOver → Basket flow) -->
+<div class="hero common-hero">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="hero-ct">
+                    <h1>Select Date &amp; Seats</h1>
+                    <ul class="breadcumb">
+                        <li class="active"><a href="#!/">Movies</a></li>
+                        <li><span class="ion-ios-arrow-right"></span> <a href="#!/venues/{{movieId}}" style="color:#abb7c4;">Venues</a></li>
+                        <li><span class="ion-ios-arrow-right"></span> Seats</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-single" ng-if="!loading && !error">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+
+                <!-- Venue image -->
+                <div style="text-align:center; margin-bottom:20px;" ng-if="dates.length > 0 && dates[0].venues_picture">
+                    <img ng-src="{{imgBase}}{{dates[0].venues_picture}}" alt="Venue"
+                         style="width:100%; max-height:250px; object-fit:cover; border-radius:8px;"
+                         onerror="this.style.display='none'">
+                </div>
+
+                <!-- Date selector -->
+                <div ng-if="dates.length > 0">
+                    <label style="color:#abb7c4; display:block; margin-bottom:6px;">Select a screening date:</label>
+                    <select class="date-select" ng-model="selection.dateId" ng-change="onDateChange()"
+                            ng-options="d.screeningDatesId as d.screeningDate for d in dates">
+                        <option value="">— Choose date —</option>
+                    </select>
+                </div>
+
+                <div class="empty-state" ng-if="dates.length === 0">
+                    <h3>No screening dates available</h3>
+                    <p><a href="#!/venues/{{movieId}}" style="color:#dcf836;">← Choose another venue</a></p>
+                </div>
+
+                <!-- Loading seats -->
+                <div class="loading-msg" ng-if="seatsLoading">
+                    <div class="spinner"></div>
+                    <p>Loading seat map...</p>
+                </div>
+
+                <!-- Seat load error -->
+                <div class="alert-err" ng-if="seatsError">
+                    Could not load seats. Please try selecting the date again.
+                </div>
+
+                <!-- Seat map -->
+                <div class="seat-map-wrap" ng-if="seatRows.length > 0 && !seatsLoading">
+                    <div class="screen-bar"></div>
+                    <div class="screen-label">screen</div>
+
+                    <div class="seat-grid">
+                        <div class="seat-row-wrap" ng-repeat="row in seatRows">
+                            <span class="seat-row-label">{{row.label}}</span>
+                            <button class="seat"
+                                    ng-repeat="s in row.seats"
+                                    ng-class="{'available': s.isReserved !== '1' && !s.selected,
+                                               'reserved': s.isReserved === '1',
+                                               'selected': s.selected}"
+                                    ng-click="toggleSeat(s)"
+                                    ng-disabled="s.isReserved === '1'"
+                                    title="Seat {{s.seatNumber}} — ${{s.price}}">
+                                {{s.seatNumber}}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="seat-legend">
+                        <span><span class="legend-dot av"></span> Available</span>
+                        <span><span class="legend-dot sel"></span> Selected</span>
+                        <span><span class="legend-dot res"></span> Reserved</span>
+                    </div>
+                </div>
+
+                <!-- Basket (appears when seats are selected — mirrors iOS BasketVC) -->
+                <div class="basket-wrap" ng-if="getSelectedSeats().length > 0">
+                    <h4 style="color:#fff; margin-bottom:12px;">
+                        <i class="ion-ios-cart"></i> Your Basket
+                    </h4>
+                    <div class="basket-item" ng-repeat="s in getSelectedSeats()">
+                        <span class="basket-seat">{{s.seatNumber}}</span>
+                        <span class="basket-detail">Row {{s.seatRow}}</span>
+                        <span class="basket-price">${{s.price}}.00</span>
+                        <button class="basket-remove" ng-click="toggleSeat(s)" title="Remove">&times;</button>
+                    </div>
+                    <div class="basket-total">
+                        <span>Total ({{getSelectedSeats().length}} ticket{{getSelectedSeats().length > 1 ? 's' : ''}})</span>
+                        <span class="total">${{getTotal()}}.00</span>
+                    </div>
+                    <button class="btn-book" style="width:100%; margin-top:12px;" ng-click="proceedToCheckout()">
+                        Proceed to Checkout
+                    </button>
+                </div>
+
+                <!-- Back navigation -->
+                <div style="text-align:center; margin-top:30px; padding-bottom:30px;">
+                    <a href="#!/venues/{{movieId}}" style="color:#abb7c4; margin-right:20px;">← Choose venue</a>
+                    <a href="#!/" style="color:#abb7c4;">← Browse movies</a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="loading-msg" ng-if="loading">
+    <div class="spinner"></div>
+    <p>Loading screening dates...</p>
+</div>
+
+<div class="empty-state" ng-if="error">
+    <h3>Error loading data</h3>
+    <p><a href="#!/venues/{{movieId}}" style="color:#dcf836;">← Choose another venue</a></p>
+    <p><a href="#!/" style="color:#dcf836;">← Back to Movies</a></p>
+</div>
+

@@ -1,0 +1,63 @@
+<!-- movies.html — Movie grid -->
+<div class="hero common-hero">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="hero-ct">
+                    <h1>Now Screening</h1>
+                    <ul class="breadcumb">
+                        <li class="active"><a href="#!/">Home</a></li>
+                        <li><span class="ion-ios-arrow-right"></span> Movies</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-single" ng-if="!loading && !loadError">
+    <div class="container">
+        <div class="row ipad-width">
+            <div class="col-md-12">
+                <div class="topbar-filter">
+                    <p>Found <span>{{(movies | filter:search).length}} movies</span> in total</p>
+                    <input type="text" ng-model="search" placeholder="Search movies..."
+                           style="background:#0b1a2a; color:#fff; border:1px solid #405266; padding:6px 14px; border-radius:4px; font-size:13px; width:220px;">
+                </div>
+                <div class="flex-wrap-movielist">
+                    <div class="movie-item-style-2 movie-item-style-1"
+                         ng-repeat="movie in movies | filter:search track by movie.movieId"
+                         ng-click="go('/venues/' + movie.movieId)" style="cursor:pointer;">
+                        <img ng-src="{{imgBase}}{{movie.large_picture}}" alt="{{movie.name}}"
+                             onerror="this.src='images/logo1.png'">
+                        <div class="hvr-inner">
+                            <a href="">
+                                Book Now <i class="ion-android-arrow-dropright"></i>
+                            </a>
+                        </div>
+                        <div class="mv-item-infor">
+                            <h6><a ng-href="{{movie.iMDB_url}}" target="_blank"
+                                   style="color:#fff;">{{movie.name}}</a></h6>
+                            <p class="rate" style="font-size:11px; color:#abb7c4; margin-top:4px;">
+                                {{movie.detail | limitTo:90}}{{movie.detail.length > 90 ? '...' : ''}}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading -->
+<div class="loading-msg" ng-if="loading">
+    <div class="spinner"></div>
+    <p>Loading movies...</p>
+</div>
+
+<!-- Error -->
+<div class="empty-state" ng-if="loadError">
+    <h3>Unable to load movies</h3>
+    <p>Please try refreshing the page.</p>
+</div>
+

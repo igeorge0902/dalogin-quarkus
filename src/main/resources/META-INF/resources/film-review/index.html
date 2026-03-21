@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+    <title>SwiftCinemas – Book Movies</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Dosis:400,700,500|Nunito:300,400,600" />
+    <link rel="stylesheet" href="css/plugins.css">
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Braintree Drop-in UI -->
+    <script src="https://js.braintreegateway.com/web/dropin/1.44.1/js/dropin.min.js"></script>
+    <style>
+        /* ── Seat map ── */
+        .seat-map-wrap { text-align: center; margin: 24px 0; }
+        .screen-bar { width: 60%; max-width: 420px; margin: 0 auto 20px; height: 6px; background: #dcf836; border-radius: 4px; }
+        .screen-label { text-align: center; color: #abb7c4; font-size: 12px; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 2px; }
+        .seat-grid { display: inline-block; }
+        .seat-row-wrap { display: flex; align-items: center; margin-bottom: 4px; }
+        .seat-row-label { width: 24px; color: #abb7c4; font-size: 11px; text-align: center; }
+        .seat { width: 32px; height: 32px; margin: 2px; border: none; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: pointer; color: #fff; display: inline-flex; align-items: center; justify-content: center; transition: all .15s; }
+        .seat.available { background: #1e6f30; }
+        .seat.available:hover { background: #27a844; }
+        .seat.reserved { background: #3a3f47; cursor: not-allowed; opacity: .6; }
+        .seat.selected { background: #dcf836; color: #020d18; }
+        .seat-legend { margin-top: 16px; display: flex; justify-content: center; gap: 20px; }
+        .seat-legend span { display: flex; align-items: center; gap: 6px; color: #abb7c4; font-size: 12px; }
+        .legend-dot { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+        .legend-dot.av { background: #1e6f30; }
+        .legend-dot.sel { background: #dcf836; }
+        .legend-dot.res { background: #3a3f47; }
+        .booking-summary { text-align: center; margin-top: 24px; padding: 16px; background: rgba(255,255,255,.04); border-radius: 8px; }
+        .booking-summary p { color: #abb7c4; margin-bottom: 12px; font-size: 14px; }
+        .booking-summary .total { color: #dcf836; font-size: 20px; font-weight: 700; }
+        .btn-book { background: #dd003f; color: #fff; border: none; padding: 12px 32px; border-radius: 4px; font-size: 15px; font-weight: 600; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: .2s; }
+        .btn-book:hover { background: #ff1050; }
+        .btn-book:disabled { opacity: .5; cursor: not-allowed; }
+        /* ── Checkout ── */
+        .checkout-wrap { max-width: 520px; margin: 0 auto; padding: 30px 0; }
+        .order-summary { background: rgba(255,255,255,.04); padding: 20px; border-radius: 8px; margin-bottom: 24px; color: #abb7c4; }
+        .order-summary h4 { color: #fff; margin-bottom: 10px; }
+        .order-summary .total { color: #dcf836; font-size: 22px; font-weight: 700; }
+        #dropin-container { min-height: 60px; }
+        .alert-ok { background: #1e6f30; color: #fff; padding: 14px; border-radius: 6px; margin: 12px 0; }
+        .alert-err { background: #dd003f; color: #fff; padding: 14px; border-radius: 6px; margin: 12px 0; }
+        /* ── Venue cards ── */
+        .venue-card { background: rgba(255,255,255,.04); border-radius: 8px; overflow: hidden; margin-bottom: 20px; transition: .2s; display: block; text-decoration: none; }
+        .venue-card:hover { background: rgba(255,255,255,.08); }
+        .venue-card img { width: 100%; height: 180px; object-fit: cover; }
+        .venue-card .info { padding: 14px; }
+        .venue-card .info h5 { color: #fff; margin: 0 0 4px; }
+        .venue-card .info p { color: #abb7c4; font-size: 13px; margin: 0; }
+        /* ── Date selector ── */
+        .date-select { width: 100%; padding: 10px; background: #0b1a2a; color: #fff; border: 1px solid #405266; border-radius: 4px; font-size: 14px; margin: 16px 0; }
+        .date-select option { background: #020d18; }
+        /* ── Loading spinner ── */
+        .loading-msg { text-align: center; padding: 60px 0; color: #abb7c4; }
+        .loading-msg .spinner { border: 3px solid #233a50; border-top-color: #dcf836; border-radius: 50%; width: 32px; height: 32px; animation: spin .8s linear infinite; margin: 0 auto 12px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        /* ── No results ── */
+        .empty-state { text-align: center; padding: 60px 20px; color: #abb7c4; }
+        .empty-state h3 { color: #fff; }
+        /* ── Movie grid fix for ng-repeat ── */
+        .flex-wrap-movielist { display: flex; flex-wrap: wrap; gap: 0; }
+        /* ── Purchase cards ── */
+        .purchase-list { margin-top: 16px; }
+        .purchase-card { display: flex; background: rgba(255,255,255,.04); border-radius: 8px; overflow: hidden; margin-bottom: 16px; transition: .2s; }
+        .purchase-card:hover { background: rgba(255,255,255,.08); }
+        .purchase-poster { flex: 0 0 120px; }
+        .purchase-poster img { width: 120px; height: 100%; object-fit: cover; }
+        .purchase-info { flex: 1; padding: 16px; }
+        .purchase-info h5 { color: #fff; margin: 0 0 6px; }
+        .purchase-info p { color: #abb7c4; font-size: 13px; margin: 0 0 4px; }
+        .purchase-info .purchase-meta { font-size: 11px; color: #6b7a8d; margin-top: 8px; }
+        .purchase-actions { margin-top: 12px; display: flex; gap: 10px; }
+        .btn-detail { background: #233a50; color: #dcf836; padding: 6px 16px; border-radius: 4px; font-size: 12px; text-decoration: none; font-weight: 600; transition: .2s; }
+        .btn-detail:hover { background: #2c4a63; color: #dcf836; text-decoration: none; }
+        .btn-delete { background: transparent; color: #e94560; border: 1px solid #e94560; padding: 5px 14px; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: 600; transition: .2s; }
+        .btn-delete:hover { background: #e94560; color: #fff; }
+        /* ── Ticket cards ── */
+        .ticket-list { margin-top: 16px; }
+        .ticket-card { display: flex; align-items: center; background: rgba(255,255,255,.04); border-radius: 8px; padding: 14px 18px; margin-bottom: 10px; transition: .2s; border: 2px solid transparent; }
+        .ticket-card:hover { background: rgba(255,255,255,.08); }
+        .ticket-card.ticket-selected { border-color: #dcf836; background: rgba(220,248,54,.06); }
+        .ticket-seat { flex: 0 0 70px; text-align: center; }
+        .ticket-seat .seat-label { display: block; font-size: 20px; font-weight: 700; color: #dcf836; }
+        .ticket-seat .seat-row-info { display: block; font-size: 11px; color: #abb7c4; }
+        .ticket-info { flex: 1; padding: 0 16px; }
+        .ticket-info p { color: #abb7c4; font-size: 13px; margin: 0 0 2px; }
+        .ticket-info .ticket-price { color: #fff; font-weight: 600; }
+        .ticket-check { flex: 0 0 30px; text-align: center; }
+        /* ── Basket (mirrors iOS BasketVC) ── */
+        .basket-wrap { background: rgba(255,255,255,.04); border-radius: 8px; padding: 20px; margin-top: 28px; border: 1px solid rgba(220,248,54,.15); }
+        .basket-item { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+        .basket-item:last-child { border-bottom: none; }
+        .basket-seat { font-weight: 700; font-size: 16px; color: #dcf836; width: 50px; }
+        .basket-detail { flex: 1; color: #abb7c4; font-size: 13px; }
+        .basket-price { color: #fff; font-weight: 600; font-size: 14px; margin-right: 12px; }
+        .basket-remove { background: transparent; border: 1px solid #e94560; color: #e94560; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: 16px; line-height: 1; display: flex; align-items: center; justify-content: center; transition: .2s; padding: 0; }
+        .basket-remove:hover { background: #e94560; color: #fff; }
+        .basket-total { display: flex; justify-content: space-between; align-items: center; padding-top: 14px; margin-top: 8px; border-top: 1px solid rgba(255,255,255,.1); color: #abb7c4; font-size: 14px; }
+        .basket-total .total { color: #dcf836; font-size: 22px; font-weight: 700; }
+        /* ── Login notice (checkout page) ── */
+        .login-notice { background: rgba(220,248,54,.08); border: 1px solid rgba(220,248,54,.2); border-radius: 6px; padding: 12px 16px; margin-bottom: 20px; color: #abb7c4; font-size: 13px; text-align: center; }
+        .login-notice i { margin-right: 6px; color: #dcf836; }
+        /* ── Login form ── */
+        .login-wrap { background: rgba(255,255,255,.04); border-radius: 8px; padding: 30px; margin-top: 20px; }
+        .login-wrap input.date-select { width: 100%; }
+        .login-wrap .alert-ok { background: #1e6f30; color: #fff; padding: 16px; border-radius: 6px; }
+        /* ── Nav auth state ── */
+        .nav-user { color: #dcf836; font-weight: 600; font-size: 13px; }
+        .nav-logout { color: #e94560 !important; cursor: pointer; }
+    </style>
+</head>
+<body ng-app="swiftCinemas">
+
+<!-- Header -->
+<header class="ht-header">
+    <div class="container">
+        <nav class="navbar navbar-default navbar-custom">
+            <div class="navbar-header logo">
+                <div class="navbar-toggle" data-toggle="collapse" data-target="#main-nav">
+                    <span class="sr-only">Toggle navigation</span>
+                    <div id="nav-icon1"><span></span><span></span><span></span></div>
+                </div>
+                <a href="#!/"><img class="logo" src="images/logo1.png" alt="SwiftCinemas" width="119" height="58"></a>
+            </div>
+            <div class="collapse navbar-collapse flex-parent" id="main-nav">
+                <ul class="nav navbar-nav flex-child-menu menu-left">
+                    <li><a href="#!/">Movies</a></li>
+                    <li><a href="#!/venues-list">Venues</a></li>
+                    <li><a href="#!/purchases">My Purchases</a></li>
+                </ul>
+                <ul class="nav navbar-nav flex-child-menu menu-right">
+                    <li ng-if="!isLoggedIn"><a href="#!/login">Log In</a></li>
+                    <li ng-if="!isLoggedIn" class="btn signupLink"><a href="/login/register.html">Sign Up</a></li>
+                    <li ng-if="isLoggedIn"><a class="nav-user">{{loggedInUser}}</a></li>
+                    <li ng-if="isLoggedIn"><a class="nav-logout" ng-click="logout()">Log Out</a></li>
+                </ul>
+            </div>
+        </nav>
+    </div>
+</header>
+
+<!-- Content area driven by AngularJS router -->
+<div ng-view></div>
+
+<!-- Footer -->
+<footer class="ht-footer">
+    <div class="container">
+        <div class="flex-parent-ft">
+            <div class="flex-child-ft item1">
+                <a href="#!/"><img class="logo" src="images/logo1.png" alt=""></a>
+                <p>SwiftCinemas<br>Book your favourite movies online</p>
+            </div>
+            <div class="flex-child-ft item2">
+                <h4>Navigation</h4>
+                <ul>
+                    <li><a href="#!/">Movies</a></li>
+                    <li><a href="#!/venues-list">Venues</a></li>
+                    <li><a href="#!/purchases">My Purchases</a></li>
+                    <li><a href="/login/">Login</a></li>
+                </ul>
+            </div>
+            <div class="flex-child-ft item5">
+                <h4>Powered By</h4>
+                <p>Quarkus 3.19 &middot; AngularJS &middot; Braintree</p>
+            </div>
+        </div>
+    </div>
+    <div class="ft-copyright">
+        <div class="ft-left"><p>SwiftCinemas &copy; 2026</p></div>
+        <div class="backtotop"><p><a href="#" id="back-to-top">Back to top <i class="ion-ios-arrow-thin-up"></i></a></p></div>
+    </div>
+</footer>
+
+<!-- JS -->
+<script src="js/jquery.js"></script>
+<script src="js/plugins.js"></script>
+<script src="js/plugins2.js"></script>
+<script src="../movies/oldAngular/angular.min.js"></script>
+<script src="../movies/angular/angular-route.min.js"></script>
+<script src="../movies/js/hmac-sha512.js"></script>
+<script src="../movies/js/enc-base64-min.js"></script>
+<script src="../movies/js/sha3.js"></script>
+<script src="../movies/js/sha512.js"></script>
+<script src="app.js"></script>
+<script src="js/custom.js"></script>
+</body>
+</html>
+

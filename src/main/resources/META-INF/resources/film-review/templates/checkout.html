@@ -1,0 +1,74 @@
+<!-- checkout.html — Braintree Drop-in payment -->
+<div class="hero common-hero">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="hero-ct">
+                    <h1>Checkout</h1>
+                    <ul class="breadcumb">
+                        <li class="active"><a href="#!/">Movies</a></li>
+                        <li><span class="ion-ios-arrow-right"></span> Checkout</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-single">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6 col-md-offset-3">
+                <div class="checkout-wrap">
+
+                    <!-- Login reminder -->
+                    <div class="login-notice" ng-if="!dropinReady && !dropinError && !paymentSuccess">
+                        <i class="ion-ios-locked"></i>
+                        Checkout requires a valid session.
+                        <a href="#!/login" style="color:#dcf836;">Log in</a> if you haven't already.
+                    </div>
+
+                    <!-- Order summary -->
+                    <div class="order-summary">
+                        <h4>Order Summary</h4>
+                        <p>Seats: <strong style="color:#fff;">{{selectedSeatIds || 'N/A'}}</strong></p>
+                        <p class="total">Total: ${{totalAmount || '0'}}.00</p>
+                    </div>
+
+                    <!-- Loading spinner (outside dropin-container so Braintree sees an empty node) -->
+                    <div class="loading-msg" ng-if="!dropinReady && !dropinError">
+                        <div class="spinner"></div>
+                        <p>Loading payment form...</p>
+                    </div>
+
+                    <!-- Braintree Drop-in container (must be empty for dropin.create) -->
+                    <div id="dropin-container" style="min-height:60px;"></div>
+
+                    <!-- Messages -->
+                    <div class="alert-err" ng-if="dropinError">
+                        {{dropinError}}<br>
+                        <a href="#!/login" style="color:#dcf836; font-weight:600;">Log in here</a> then return to complete your purchase.
+                    </div>
+                    <div class="alert-ok" ng-if="paymentSuccess">Payment successful! {{paymentSuccess}}</div>
+                    <div class="alert-err" ng-if="paymentError">{{paymentError}}</div>
+
+                    <!-- Pay button -->
+                    <button class="btn-book" style="width:100%; margin-top:16px;"
+                            ng-click="submitPayment()"
+                            ng-disabled="!dropinReady || paymentProcessing">
+                        <span ng-if="!paymentProcessing">Pay Now</span>
+                        <span ng-if="paymentProcessing">Processing...</span>
+                    </button>
+
+                    <div style="text-align:center; margin-top:24px;">
+                        <a href="#!/purchases" style="color:#dcf836;" ng-if="paymentSuccess">View My Purchases</a>
+                        <span ng-if="paymentSuccess"> &middot; </span>
+                        <a ng-click="goBack()" style="color:#abb7c4; cursor:pointer; margin-right:16px;" ng-if="!paymentSuccess">← Back to Seats</a>
+                        <a href="#!/" style="color:#abb7c4;">← Browse Movies</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
