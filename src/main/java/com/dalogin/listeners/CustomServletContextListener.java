@@ -10,12 +10,14 @@ import com.dalogin.utils.PropertyUtils;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.TreeMultimap;
+import jakarta.inject.Inject;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.annotation.WebListener;
 import org.apache.log4j.Logger;
 
+import javax.sql.DataSource;
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.InputStream;
@@ -31,6 +33,9 @@ public class CustomServletContextListener implements ServletContextListener {
     public static String gmail_smtp = null;
 
     private static final Logger log = Logger.getLogger(Logger.class.getName());
+
+    @Inject
+    DataSource dataSource;
 
     /**
      *
@@ -51,23 +56,25 @@ public class CustomServletContextListener implements ServletContextListener {
         } catch (Exception e) {
             System.err.println(e.getMessage());
         }
-        /*
-         * dB parameters loaded from web.xml
-         */
-        String dbUrl = System.getenv().getOrDefault("DB_URL", "jdbc:mysql://localhost:3306/login_");
 
-        final String url = dbUrl;
-        final String u = "sqluser";
-        final String p = "sqluserpw";
+        // Use Quarkus Agroal pooled DataSource instead of raw DriverManager connections.
+        // Falls back to legacy DriverManager if CDI injection is not available.
+        DBConnectionManager dbManager;
+        if (dataSource != null) {
+            dbManager = new DBConnectionManager(dataSource);
+            log.info("Database connection pool initialized (Quarkus Agroal DataSource).");
+        } else {
+            String dbUrl = System.getenv().getOrDefault("DB_URL", "jdbc:mysql://localhost:3306/login_");
+            dbManager = new DBConnectionManager(dbUrl, "sqluser", "sqluserpw");
+            log.info("Database connection initialized (legacy DriverManager).");
+        }
+        context.setAttribute("DBManager", dbManager);
+
         /*
          * timeOut parameter for session creation (& to prevent playback attacks)
          */
         final String time = context.getInitParameter("TIME");
         context.setAttribute("time", time);
-        //create database connection from init parameters and set it to context
-        DBConnectionManager dbManager = new DBConnectionManager(url, u, p);
-        context.setAttribute("DBManager", dbManager);
-        log.info("Database connection initialized for Application.");
         //
         // instanciate a map to store references to all the active
         // sessions and bind it to context scope.

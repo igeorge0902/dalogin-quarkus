@@ -167,6 +167,23 @@ public class HelloWorld extends HttpServlet implements Serializable {
 
         try {
             List<String> token2 = SQLAccess.getToken2(deviceId, context);
+
+            // Guard against race condition: if insertSessionCreated hasn't committed
+            // yet, getToken2 may return an empty list. Retry once after a short delay.
+            if (token2.size() < 2) {
+                try { Thread.sleep(100); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+                token2 = SQLAccess.getToken2(deviceId, context);
+            }
+            if (token2.size() < 2) {
+                log.error("getToken2 returned empty for deviceId=" + deviceId + " after retry");
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                JSONObject err = new JSONObject()
+                        .put("Success", "false")
+                        .put("Message", "Session token not yet available, please retry");
+                writeJson(response, err);
+                return;
+            }
+
             String xsrfToken = aesUtil.encrypt(SALT, IV, token2.get(1), token2.get(0));
 
             String actualToken = xsrfToken.endsWith("=")
