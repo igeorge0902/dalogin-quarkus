@@ -23,24 +23,16 @@ public class Voucher extends HttpServlet {
      *
      */
     private static final long serialVersionUID = 1L;
-    private volatile static String voucher;
 
     public void init() throws ServletException {
     }
 
-    public synchronized void processRequest(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        String userName = "admin";
-        String password = "Tapsihapsi666";
-        request.login(userName, password);
-    }
-
-    public synchronized void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         // Set response content type
         response.setContentType("application/json");
         try {
             // Actual logic goes here.
-            voucher = request.getParameter("voucher");
+            String voucher = request.getParameter("voucher");
             ServletContext context = request.getServletContext();
             if (voucher != null && SQLAccess.checkVoucher(voucher, context)) {
                 response.setContentType("application/json");
@@ -60,12 +52,11 @@ public class Voucher extends HttpServlet {
         }
     }
 
-    public synchronized void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        //processRequest(request, response);
+    public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         // Set response content type
         response.setContentType("text/html");
         try {
-            voucher = request.getParameter("voucher");
+            String voucher = request.getParameter("voucher");
             if (voucher.trim().isEmpty()) {
                 response.sendError(HttpServletResponse.SC_BAD_GATEWAY);
             }

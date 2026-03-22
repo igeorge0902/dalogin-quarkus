@@ -26,18 +26,6 @@ public class LoggingOut extends HttpServlet {
      *
      */
     private static final long serialVersionUID = -9006384818191092461L;
-    /**
-     *
-     */
-    public volatile static String user;
-    /**
-     *
-     */
-    public volatile static HttpSession session;
-    /**
-     *
-     */
-    public volatile static String deviceId;
 
     /**
      *
@@ -52,20 +40,20 @@ public class LoggingOut extends HttpServlet {
      * @param response
      * @throws Exception
      */
-    public synchronized void processRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
+    public void processRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
     }
 
     /**
      *
      */
-    public synchronized void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
     }
 
     /**
      *
      */
-    public synchronized void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        session = request.getSession(false);
+    public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        HttpSession session = request.getSession(false);
         if (session != null) {
             ServletContext context = request.getServletContext();
             session.removeAttribute("user");

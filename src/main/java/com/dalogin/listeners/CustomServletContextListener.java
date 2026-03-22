@@ -29,26 +29,8 @@ public class CustomServletContextListener implements ServletContextListener {
     public static String gmail_password = null;
     public static String gmail_username = null;
     public static String gmail_smtp = null;
-    /**
-     *
-     */
-    private static Logger log = Logger.getLogger(Logger.class.getName());
-    /**
-     *
-     */
-    private volatile static ConcurrentHashMap<String, Object> activeUsers;
-    /**
-     *
-     */
-    private static volatile Multimap<String, String> sessions;
-    /**
-     *
-     */
-    private static volatile HashMap<String, String> attributes;
-    /**
-     *
-     */
-    private static volatile HashMap<String, String> urls;
+
+    private static final Logger log = Logger.getLogger(Logger.class.getName());
 
     /**
      *
@@ -90,11 +72,11 @@ public class CustomServletContextListener implements ServletContextListener {
         // instanciate a map to store references to all the active
         // sessions and bind it to context scope.
         //
-        activeUsers = new ConcurrentHashMap<String, Object>();
+        ConcurrentHashMap<String, Object> activeUsers = new ConcurrentHashMap<String, Object>();
         context.setAttribute("activeUsers", activeUsers);
-        attributes = new HashMap<String, String>();
+        HashMap<String, String> attributes = new HashMap<String, String>();
         context.setAttribute("attributes", attributes);
-        sessions = Multimaps.synchronizedSortedSetMultimap(TreeMultimap.create());
+        Multimap<String, String> sessions = Multimaps.synchronizedSortedSetMultimap(TreeMultimap.create());
         context.setAttribute("sessions", sessions);
         //PBI: resolve dependencies for WildFly, smoothly
         //WS SOAP taken out due to dependency conflict on WildFly.

@@ -32,36 +32,9 @@ public class HelloWorld extends HttpServlet implements Serializable {
     private static final int KEYSIZE = 128;
     private static final int ITERATIONCOUNT = 1000;
 
-    // Session/user-related state
-    private volatile static String pass;
-    private volatile static String user;
-    private volatile static String hash1;
-    private volatile static String deviceId;
-    private volatile static String deviceId_;
-    private volatile static String contentLength;
-    private volatile static String ios;
-    private volatile static String webView;
-    private volatile static String M;
-    private volatile static HttpSession session;
-    private volatile static long sessionCreated;
-    private volatile static String sessionID;
-    private volatile static List<String> token2;
-    private volatile static String hmac;
-    private volatile static String hmacHash;
-    private volatile static String time;
-    private static volatile long T;
-
-    // Tokens
-    private static volatile String actualToken;
-    private static volatile String xsrfToken;
-
-    // Cookies
-    private static volatile Cookie cookieXSRF;
-    private static volatile Cookie cookieToken;
-
-    // Utilities
-    private static AesUtil aesUtil;
     private static final Logger log = Logger.getLogger(Logger.class.getName());
+
+    private AesUtil aesUtil;
 
     @Override
     public void init() throws ServletException {
@@ -72,20 +45,19 @@ public class HelloWorld extends HttpServlet implements Serializable {
      * Authentication via POST.
      */
     @Override
-    public synchronized void doPost(HttpServletRequest request, HttpServletResponse response)
+    public void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
         response.setContentType("application/json");
         response.setCharacterEncoding("utf-8");
 
         // Invalidate old session if exists
-        session = request.getSession(false);
+        HttpSession session = request.getSession(false);
         if (session != null) {
             session.invalidate();
         }
 
         ServletContext context = request.getServletContext();
-      //  final long T2 = Long.parseLong(context.getAttribute("time").toString());
 
         // Extract headers/parameters
         String rawHmac = request.getHeader("X-HMAC-HASH");
@@ -105,21 +77,21 @@ public class HelloWorld extends HttpServlet implements Serializable {
             return;
         }
 
-        hmac = rawHmac.trim();
-        contentLength = rawContentLength.trim();
-        time = rawTime.trim();
-        pass = rawPass.trim();
-        user = rawUser.trim();
-        deviceId = rawDeviceId.trim();
-        ios = request.getParameter("ios");
-        webView = request.getHeader("User-Agent");
-        M = request.getHeader("M");
+        String hmac = rawHmac.trim();
+        String contentLength = rawContentLength.trim();
+        String time = rawTime.trim();
+        String pass = rawPass.trim();
+        String user = rawUser.trim();
+        String deviceId = rawDeviceId.trim();
+        String ios = request.getParameter("ios");
+        String webView = request.getHeader("User-Agent");
+        String M = request.getHeader("M");
         if (M == null) M = "";
 
-        deviceId_ = request.getHeader("M-Device");
-        T = Long.parseLong(time.trim());
+        String deviceId_ = request.getHeader("M-Device");
+        long T = Long.parseLong(time.trim());
 
-        hmacHash = hmac512.getLoginHmac512(user, pass, deviceId, time, contentLength);
+        String hmacHash = hmac512.getLoginHmac512(user, pass, deviceId, time, contentLength);
         log.info("Handshake received: " + hmac + " vs expected: " + hmacHash);
 
         try {
@@ -130,11 +102,11 @@ public class HelloWorld extends HttpServlet implements Serializable {
             log.info("No deviceId decryption performed.");
         }
 
-        hash1 = hashPassword(pass, user, context);
+        String hash1 = hashPassword(pass, user, context);
 
         // Validate password and HMAC
         if (pass.equals(hash1) && hmac.equals(hmacHash)) {
-            createSession(request, context, response);
+            createSession(request, context, response, user, deviceId, ios, webView, M);
         } else {
             sendAuthFailed(response);
         }
@@ -144,19 +116,19 @@ public class HelloWorld extends HttpServlet implements Serializable {
      * Basic GET check, mainly validation.
      */
     @Override
-    public synchronized void doGet(HttpServletRequest request, HttpServletResponse response)
+    public void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
         response.setContentType("text/html");
-        session = request.getSession(false);
+        HttpSession session = request.getSession(false);
         if (session != null) {
             session.invalidate();
         }
 
         try {
-            pass = request.getParameter("pswrd");
-            user = request.getParameter("user");
-            deviceId = request.getParameter("deviceId");
+            String pass = request.getParameter("pswrd");
+            String user = request.getParameter("user");
+            String deviceId = request.getParameter("deviceId");
 
             if (user.trim().isEmpty() || pass.trim().isEmpty() || deviceId.trim().isEmpty()) {
                 response.sendError(HttpServletResponse.SC_BAD_GATEWAY);
@@ -170,12 +142,13 @@ public class HelloWorld extends HttpServlet implements Serializable {
     public void destroy() {
     }
 
-    private void createSession(HttpServletRequest request, ServletContext context, HttpServletResponse response)
+    private void createSession(HttpServletRequest request, ServletContext context, HttpServletResponse response,
+                               String user, String deviceId, String ios, String webView, String M)
             throws ServletException, IOException {
 
-        session = request.getSession(true);
-        sessionCreated = session.getCreationTime();
-        sessionID = session.getId();
+        HttpSession session = request.getSession(true);
+        long sessionCreated = session.getCreationTime();
+        String sessionID = session.getId();
 
         synchronized (session) {
             session.setAttribute("user", user);
@@ -193,21 +166,21 @@ public class HelloWorld extends HttpServlet implements Serializable {
         session.setMaxInactiveInterval(30 * 60);
 
         try {
-            token2 = SQLAccess.getToken2(deviceId, context);
-            xsrfToken = aesUtil.encrypt(SALT, IV, token2.get(1), token2.get(0));
+            List<String> token2 = SQLAccess.getToken2(deviceId, context);
+            String xsrfToken = aesUtil.encrypt(SALT, IV, token2.get(1), token2.get(0));
 
-            actualToken = xsrfToken.endsWith("=")
+            String actualToken = xsrfToken.endsWith("=")
                     ? xsrfToken.substring(0, xsrfToken.length() - 1)
                     : xsrfToken.trim();
 
             // Cookies
-            cookieXSRF = new Cookie("XSRF-TOKEN", actualToken);
+            Cookie cookieXSRF = new Cookie("XSRF-TOKEN", actualToken);
             cookieXSRF.setSecure(true);
             cookieXSRF.setHttpOnly(true);
             cookieXSRF.setMaxAge(session.getMaxInactiveInterval());
             cookieXSRF.setPath(context.getContextPath());
 
-            cookieToken = new Cookie("X-Token", token2.get(0));
+            Cookie cookieToken = new Cookie("X-Token", token2.get(0));
             cookieToken.setSecure(true);
             cookieToken.setMaxAge(session.getMaxInactiveInterval());
 
@@ -221,8 +194,8 @@ public class HelloWorld extends HttpServlet implements Serializable {
             session.setAttribute("TIME_", token2.get(1));
 
             JSONObject json = (ios != null)
-                    ? buildMobileResponse()
-                    : buildWebResponse();
+                    ? buildMobileResponse(sessionID, token2)
+                    : buildWebResponse(token2);
 
             writeJson(response, json);
 
@@ -231,14 +204,14 @@ public class HelloWorld extends HttpServlet implements Serializable {
         }
     }
 
-    private JSONObject buildMobileResponse() {
+    private JSONObject buildMobileResponse(String sessionID, List<String> token2) {
         return new JSONObject()
                 .put("success", 1)
                 .put("JSESSIONID", sessionID)
                 .put("X-Token", token2.get(0));
     }
 
-    private JSONObject buildWebResponse() {
+    private JSONObject buildWebResponse(List<String> token2) {
         return new JSONObject()
                 .put("Session", "raked")
                 .put("Success", "true")
@@ -266,10 +239,9 @@ public class HelloWorld extends HttpServlet implements Serializable {
 
     private String hashPassword(String pass, String user, ServletContext context) throws ServletException {
         try {
-            hash1 = SQLAccess.getHash(pass, user, context);
+            return SQLAccess.getHash(pass, user, context);
         } catch (Exception e) {
             throw new ServletException(e.getMessage());
         }
-        return hash1;
     }
 }

@@ -15,101 +15,35 @@ import org.apache.log4j.Logger;
 
 import java.io.Serializable;
 import java.util.Collection;
-import java.util.SortedSet;
+import java.util.List;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  *
- * Listener to manage session attributes, session creation. 
+ * Listener to manage session attributes, session creation.
  *
  * Session is bound to deviceId, i.e. one device with identical id will always have one session.
- * Session-based calls for sensitive data are verified with tokens, therefore over-spawning sessionIds 
+ * Session-based calls for sensitive data are verified with tokens, therefore over-spawning sessionIds
  * at extreme condition are not considered an issue because the dB will store/overwrite the tokens for the same device id with the last sessionId.
  *
- * It is guaranteed to work in normal conditions. 
+ * It is guaranteed to work in normal conditions.
  *
  */
 @WebListener
 public class CustomHttpSessionListener extends HttpServlet implements HttpSessionListener, Serializable, HttpSessionAttributeListener {
-    /**
-     *
-     */
     private static final long serialVersionUID = -6951824749917799153L;
-    /**
-     *
-     */
-    public static volatile ConcurrentHashMap<String, HttpSession> activeUsers;
-    /**
-     *
-     */
-    private static Logger log = Logger.getLogger(Logger.class.getName());
-    /**
-     *
-     */
-    private static volatile SetMultimap<String, String> sessions;
-    /**
-     *
-     */
-    private static volatile TreeMap<String, String> attributes = new TreeMap<String, String>();
-    /**
-     *
-     */
-    private static volatile TreeMap<String, String> attributes_ = new TreeMap<String, String>();
-    /**
-     *
-     */
-    private static volatile SortedSet<String> sessionData;
-    /**
-     *
-     */
-    private static volatile String id;
-    /**
-     *
-     */
-    private static volatile String name;
-    /**
-     *
-     */
-    private static volatile String value;
-    /**
-     *
-     */
-    private static volatile String D;
-    /**
-     *
-     */
-    private static volatile String D_;
-    /**
-     *
-     */
-    private static volatile String G;
-    /**
-     *
-     */
-    private static volatile String G_;
-    /**
-     *
-     */
-    private static volatile String useR;
-    /**
-     *
-     */
-    private static volatile String g;
+    private static final Logger log = Logger.getLogger(Logger.class.getName());
 
-    /**
-     *
-     */
+    // Instance-level maps for tracking attribute bindings within this listener.
+    // These are used for correlating deviceId ↔ user across attributeAdded/Removed callbacks.
+    private final TreeMap<String, String> attributes = new TreeMap<>();
+    private final TreeMap<String, String> attributes_ = new TreeMap<>();
+
     public void init(ServletConfig config) {
     }
 
-    /**
-     * Returns a TreeMap with a name - value entry of a given attribute.
-     *
-     * @param name
-     * @param value
-     * @return attributes
-     */
     private TreeMap<String, String> SetMappings(String name, String value) {
         attributes.put(name, value);
         Collection<String> fruits = attributes.values();
@@ -117,24 +51,10 @@ public class CustomHttpSessionListener extends HttpServlet implements HttpSessio
         return attributes;
     }
 
-    /**
-     * Returns the value of the given attribute name.
-     *
-     * @param name
-     * @return G
-     */
     private String GetMappings(String name) {
-        G = attributes.get(name);
-        return G;
+        return attributes.get(name);
     }
 
-    /**
-     * Returns a TreeMap with a name - value entry of a given attribute.
-     *
-     * @param name
-     * @param value
-     * @return attributes_
-     */
     private TreeMap<String, String> SetMappings_(String name, String value) {
         attributes_.put(name, value);
         Collection<String> fruits_ = attributes_.values();
@@ -142,21 +62,10 @@ public class CustomHttpSessionListener extends HttpServlet implements HttpSessio
         return attributes_;
     }
 
-    /**
-     * Returns the value of the given attribute name.
-     *
-     * @param name
-     * @return G_
-     */
     private String GetMappings_(String name) {
-        G_ = attributes_.get(name);
-        return G_;
+        return attributes_.get(name);
     }
 
-    /**
-     * Session attribute changes 
-     *
-     */
     @SuppressWarnings("unchecked")
     @Override
     public void attributeAdded(HttpSessionBindingEvent se) {
@@ -169,11 +78,11 @@ public class CustomHttpSessionListener extends HttpServlet implements HttpSessio
         }
         HttpSession session = se.getSession();
         ServletContext context = session.getServletContext();
-        activeUsers = (ConcurrentHashMap<String, HttpSession>) context.getAttribute("activeUsers");
-        sessions = (SetMultimap<String, String>) context.getAttribute("sessions");
-        id = session.getId();
-        name = se.getName();
-        value = (String) se.getValue();
+        ConcurrentHashMap<String, HttpSession> activeUsers = (ConcurrentHashMap<String, HttpSession>) context.getAttribute("activeUsers");
+        SetMultimap<String, String> sessions = (SetMultimap<String, String>) context.getAttribute("sessions");
+        String id = session.getId();
+        String name = se.getName();
+        String value = (String) se.getValue();
         log.info("Name: " + attributes.keySet() + "Value: " + attributes.values());
         String source = se.getSource().getClass().getName();
         String message = new StringBuffer("Attribute bound to session in ")
@@ -182,8 +91,40 @@ public class CustomHttpSessionListener extends HttpServlet implements HttpSessio
                 .append("\n").append("The session ID: ").append(id).toString();
         log.info(message);
         SetMappings(name, value);
-        D = GetMappings("deviceId");
-        useR = GetMappings("user");
+        String D = GetMappings("deviceId");
+        String useR = GetMappings("user");
+
+        // ── Enforce one session per deviceId ──────────────────────────
+        // When the "deviceId" attribute is set, evict any previous session
+        // that was bound to the same device.
+        if ("deviceId".equals(name) && D != null) {
+            Set<String> oldEntries = sessions.get(D);
+            if (oldEntries != null && !oldEntries.isEmpty()) {
+                // Collect session IDs from the multimap (values that look like session IDs, not usernames)
+                List<String> oldSessionIds = new java.util.ArrayList<>();
+                for (String entry : oldEntries) {
+                    // The multimap stores both the username and the sessionId under the deviceId key.
+                    // Session IDs are present in activeUsers; usernames are not.
+                    if (activeUsers.containsKey(entry) && !entry.equals(id)) {
+                        oldSessionIds.add(entry);
+                    }
+                }
+                for (String oldSid : oldSessionIds) {
+                    HttpSession oldSession = activeUsers.remove(oldSid);
+                    if (oldSession != null) {
+                        log.info("Evicting previous session for deviceId=" + D + ": " + oldSid);
+                        try {
+                            oldSession.invalidate();
+                        } catch (IllegalStateException ignored) {
+                            // already invalidated
+                        }
+                    }
+                }
+                // Clear old multimap entries for this device — will be re-added below
+                sessions.removeAll(D);
+            }
+        }
+
         // It will be null at first time.
         try {
             sessions.put(D, useR);
@@ -196,7 +137,6 @@ public class CustomHttpSessionListener extends HttpServlet implements HttpSessio
         log.info("Active UserSessions (attribute Added): " + activeUsers.keySet().toString());
     }
 
-    /** Session attribute changes **/
     @Override
     public void attributeRemoved(HttpSessionBindingEvent se) {
         // Quarkus CDI may store internal objects as session attributes;
@@ -207,11 +147,15 @@ public class CustomHttpSessionListener extends HttpServlet implements HttpSessio
             return;
         }
         HttpSession session = se.getSession();
-        id = session.getId();
-        name = se.getName();
+        @SuppressWarnings("unchecked")
+        ConcurrentHashMap<String, HttpSession> activeUsers = (ConcurrentHashMap<String, HttpSession>) session.getServletContext().getAttribute("activeUsers");
+        @SuppressWarnings("unchecked")
+        SetMultimap<String, String> sessions = (SetMultimap<String, String>) session.getServletContext().getAttribute("sessions");
+        String id = session.getId();
+        String name = se.getName();
         if (name == null)
             name = "Unknown";
-        value = (String) se.getValue();
+        String value = (String) se.getValue();
         String source = se.getSource().getClass().getName();
         String message = new StringBuffer("Attribute unbound from session in ")
                 .append(source).append("\nThe attribute name: ").append(name)
@@ -219,7 +163,7 @@ public class CustomHttpSessionListener extends HttpServlet implements HttpSessio
                 .append("\n").append("The session ID: ").append(id).toString();
         log.info(message);
         SetMappings_(name, value);
-        D_ = GetMappings_("deviceId");
+        String D_ = GetMappings_("deviceId");
         // removes existing sessionId
         activeUsers.remove(id);
         log.info("deviceId_ &sessioId at remove: " + D_ + "," + id);
@@ -233,27 +177,18 @@ public class CustomHttpSessionListener extends HttpServlet implements HttpSessio
         log.info("SessionUsers (attributeRemoved): " + sessions.entries());
     }
 
-    /**
-     * Session attribute changes *
-     *
-     */
     @Override
     public void attributeReplaced(HttpSessionBindingEvent arg0) {
     }
 
-    /**
-     * Adds sessions to the context ConcurrentHashMap on context when they are created..
-     */
     @SuppressWarnings("unchecked")
     public void sessionCreated(HttpSessionEvent event) {
         HttpSession session = event.getSession();
         ServletContext context = session.getServletContext();
         log.info("Context attributes: " + context.getAttributeNames().nextElement());
-        // ConcurrentHashMap in context to hold sessions
-        activeUsers = (ConcurrentHashMap<String, HttpSession>) context.getAttribute("activeUsers");
-        // SetMultimap helper list in context to hold values bound to deviceId as key
-        sessions = (SetMultimap<String, String>) context.getAttribute("sessions");
-        D = GetMappings("deviceId");
+        ConcurrentHashMap<String, HttpSession> activeUsers = (ConcurrentHashMap<String, HttpSession>) context.getAttribute("activeUsers");
+        SetMultimap<String, String> sessions = (SetMultimap<String, String>) context.getAttribute("sessions");
+        String D = GetMappings("deviceId");
         // when creating a new session, if it's a new device, add user and sessionId tied to deviceId
         if (!sessions.containsKey(D)) {
             activeUsers.put(session.getId(), session);
@@ -262,21 +197,15 @@ public class CustomHttpSessionListener extends HttpServlet implements HttpSessio
         log.info("Active UserSessions (session Created): " + activeUsers.keySet().toString());
     }
 
-    /**
-     * Destroy sessions in the container, and remove them from ConcurrentHashMap on context when they expire
-     * or are invalidated. 
-     *
-     * TODO: on TomCat, it is called on TomCat shutdown, triggering new tokens.
-     */
     @SuppressWarnings("unchecked")
     public void sessionDestroyed(HttpSessionEvent event) {
         HttpSession session = event.getSession();
         if (session != null && session.getAttribute("deviceId") != null) {
             ServletContext context = session.getServletContext();
-            activeUsers = (ConcurrentHashMap<String, HttpSession>) context.getAttribute("activeUsers");
-            sessions = (SetMultimap<String, String>) context.getAttribute("sessions");
-            D_ = session.getAttribute("deviceId").toString();
-            id = session.getId();
+            ConcurrentHashMap<String, HttpSession> activeUsers = (ConcurrentHashMap<String, HttpSession>) context.getAttribute("activeUsers");
+            SetMultimap<String, String> sessions = (SetMultimap<String, String>) context.getAttribute("sessions");
+            String D_ = session.getAttribute("deviceId").toString();
+            String id = session.getId();
             log.info("deviceId_ at destroy: " + D_);
             activeUsers.remove(session.getId());
             sessions.removeAll(D_);

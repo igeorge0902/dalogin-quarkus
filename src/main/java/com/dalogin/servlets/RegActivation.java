@@ -29,87 +29,24 @@ import java.util.Map;
 
 @WebServlet(urlPatterns = "/activation", name = "RegActivation")
 public class RegActivation extends HttpServlet {
-    /**
-     *
-     */
     private static final long serialVersionUID = -933199811013368066L;
-    /**
-     *
-     */
     private static final String SALT = "3FF2EC019C627B945225DEBAD71A01B6985FE84C95A70EB132882F88C0A59A55";
     private static final String IV = "F27D5C9927726BCEFE7510B1BDD3D137";
     private static final String activationToken_ = "G";
     private static final int KEYSIZE = 128;
     private static final int ITERATIONCOUNT = 1000;
-    /**
-     *
-     */
-    public static volatile String token;
-    /**
-     *
-     */
-    protected volatile static HttpSession session = null;
-    /**
-     *
-     */
-    private volatile static String user;
-    /**
-     *
-     */
-    private volatile static List<String> token2;
-    /**
-     *
-     */
-    private volatile static String ciphertext;
-    /**
-     *
-     */
-    private volatile static String deviceId;
-    /**
-     *
-     */
-    private static volatile String email;
-    /**
-     *
-     */
-    private static volatile List<String> list;
-    /**
-     *
-     */
-    private static volatile String activationData;
-    private static AesUtil aesUtil;
-    private static volatile boolean True;
-    private static volatile String query;
-    private static volatile String[] params;
-    private static volatile Map<String, String> queryMap;
-    private static volatile String name;
-    private static volatile String value;
-    private static Logger log = Logger.getLogger(Logger.class.getName());
+    private static final Logger log = Logger.getLogger(Logger.class.getName());
 
-    /**
-     *
-     */
+    private AesUtil aesUtil;
+
     public void init() throws ServletException {
         aesUtil = new AesUtil(KEYSIZE, ITERATIONCOUNT);
     }
 
-    /**
-     *
-     * @param request
-     * @param response
-     * @throws ServletException
-     * @throws IOException
-     */
-    public synchronized void processRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-    }
-
-    /**
-     * TODO: add user session validation. (Global filters)
-     */
-    public synchronized void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        session = request.getSession(false);
+    public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        HttpSession session = request.getSession(false);
         ServletContext context = session.getServletContext();
-        ciphertext = request.getHeader("Ciphertext").trim();
+        String ciphertext = request.getHeader("Ciphertext");
         if (ciphertext != null) ciphertext = ciphertext.trim();
         StringBuilder sb = new StringBuilder();
         BufferedReader br = request.getReader();
@@ -118,22 +55,21 @@ public class RegActivation extends HttpServlet {
             sb.append(str);
         }
         JSONObject jObj = new JSONObject(sb.toString());
-        user = jObj.getString("user");
-        deviceId = jObj.getString("deviceId");
+        String user = jObj.getString("user");
+        String deviceId = jObj.getString("deviceId");
         try {
-            token2 = SQLAccess.getToken2(deviceId, context);
-            True = token2.get(0).equals(ciphertext);
-            if (True) {
-                list = SQLAccess.getActivationToken(user, context);
-                token = list.get(0);
-                email = list.get(1);
+            List<String> token2 = SQLAccess.getToken2(deviceId, context);
+            boolean isValid = token2.get(0).equals(ciphertext);
+            if (isValid) {
+                List<String> list = SQLAccess.getActivationToken(user, context);
+                String token = list.get(0);
+                String email = list.get(1);
                 // send email for activation
                 String scheme = request.getScheme();
                 String serverName = request.getServerName();
                 String servletContext = context.getContextPath();
                 // prepare data
-                activationData = "user=" + user + "&token2=" + token;
-                //activationToken = SQLAccess.activation_token(user, context).get(0);
+                String activationData = "user=" + user + "&token2=" + token;
                 // Construct requesting URL
                 StringBuilder url = new StringBuilder();
                 url.append(scheme).append("://")
@@ -163,23 +99,23 @@ public class RegActivation extends HttpServlet {
         }
     }
 
-    public synchronized void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         response.setContentType("application/json");
         response.setCharacterEncoding("utf-8");
-        session = request.getSession(true);
+        HttpSession session = request.getSession(true);
         ServletContext context = session.getServletContext();
         String parameter = request.getQueryString();
         String[] activationData = parameter.split("=");
-        query = aesUtil.decrypt(SALT, IV, activationToken_, activationData[1]);
-        params = query.split("&");
-        queryMap = new HashMap<String, String>();
+        String query = aesUtil.decrypt(SALT, IV, activationToken_, activationData[1]);
+        String[] params = query.split("&");
+        Map<String, String> queryMap = new HashMap<>();
         String user = "";
         String token2 = "";
         int i = 0;
         Arrays.sort(params);
         for (String param : params) {
-            name = param.split("=")[0];
-            value = param.split("=")[1];
+            String name = param.split("=")[0];
+            String value = param.split("=")[1];
             queryMap.put(name, value);
             i++;
             if (i == 1) {

@@ -17,11 +17,8 @@ public class ChangePswFilter implements Filter {
     private static final int ITERATIONCOUNT = 1000;
     private static final String SALT = "3FF2EC019C627B945225DEBAD71A01B6985FE84C95A70EB132882F88C0A59A55";
     private static final String IV = "F27D5C9927726BCEFE7510B1BDD3D137";
-    private volatile static List<String> cC;
-    private static AesUtil aesUtil;
-    private volatile static String encrypted_token;
-    private volatile static String email;
-    private static Logger log = Logger.getLogger(Logger.class.getName());
+    private static final Logger log = Logger.getLogger(Logger.class.getName());
+    private AesUtil aesUtil;
     private ServletContext context;
 
     public void init(FilterConfig fConfig) throws ServletException {
@@ -32,23 +29,24 @@ public class ChangePswFilter implements Filter {
 
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest req = (HttpServletRequest) request;
-        email = request.getParameter("email");
+        String email = request.getParameter("email");
         // Set the response message's MIME type
         response.setContentType("text/html;charset=UTF-8");
         // retrieve email which requested the password reset
+        List<String> cC;
         try {
             cC = SQLAccess.getForgotPswConfirmationCode(email, context);
         } catch (Exception e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
+            return;
         }
-        encrypted_token = aesUtil.encrypt(SALT, IV, cC.get(1), cC.get(0));
+        String encrypted_token = aesUtil.encrypt(SALT, IV, cC.get(1), cC.get(0));
         Cookie[] cookies = req.getCookies();
         if (cookies != null) {
             for (Cookie cookie : cookies) {
                 if (cookie.getName().equalsIgnoreCase("XSRF-TOKEN")) {
                     String actualToken = cookie.getValue().trim();
-                    String encrypted_token_ = "";
+                    String encrypted_token_;
                     String token = encrypted_token.trim();
                     int l = token.length();
                     if (token.endsWith("=")) {

@@ -15,15 +15,15 @@ import java.util.HashMap;
 public class ExceptionHandler extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
-    protected synchronized void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         processError(request, response);
     }
 
-    protected synchronized void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         processError(request, response);
     }
 
-    public synchronized void processError(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    public void processError(HttpServletRequest request, HttpServletResponse response) throws IOException {
         // Analyze the servlet exception
         Throwable throwable = (Throwable) request.getAttribute("jakarta.servlet.error.exception");
         Integer statusCode = (Integer) request.getAttribute("jakarta.servlet.error.status_code");

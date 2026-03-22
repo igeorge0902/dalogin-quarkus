@@ -22,11 +22,7 @@ import java.util.List;
 
 @WebFilter(servletNames = {"GetAllPurchases", "CheckOut", "ManagePurchases"})
 public class ActiveVoucherFilter implements Filter {
-    private volatile static String Response = null;
-    private volatile static String user = null;
-    private volatile static List<String> token2;
-    private volatile static String deviceId;
-    private static Logger log = Logger.getLogger(Logger.class.getName());
+    private static final Logger log = Logger.getLogger(Logger.class.getName());
     private ServletContext context;
 
     public void init(FilterConfig fConfig) throws ServletException {
@@ -65,10 +61,11 @@ public class ActiveVoucherFilter implements Filter {
             out.flush();
         } else if (session != null && req.isRequestedSessionIdValid() && cookies != null) {
             // Get user from session
-            user = (String) session.getAttribute("user");
-            deviceId = (String) session.getAttribute("deviceId");
+            String user = (String) session.getAttribute("user");
+            String deviceId = (String) session.getAttribute("deviceId");
+            String activationResponse;
             try {
-                Response = SQLAccess.checkActivation(user, context);
+                activationResponse = SQLAccess.checkActivation(user, context);
             } catch (Exception e) {
                 res.setContentType("application/json");
                 res.setCharacterEncoding("utf-8");
@@ -82,8 +79,10 @@ public class ActiveVoucherFilter implements Filter {
                 // finally output the json string
                 out.print(json.toString());
                 out.flush();
+                return;
             }
-            if (Response == "S") {
+            if ("S".equals(activationResponse)) {
+                List<String> token2;
                 try {
                     token2 = SQLAccess.getToken2(deviceId, context);
                 } catch (Exception e) {
@@ -91,6 +90,7 @@ public class ActiveVoucherFilter implements Filter {
                     res.setCharacterEncoding("utf-8");
                     res.setStatus(502);
                     log.info(e.getMessage());
+                    return;
                 }
                 res.setContentType("application/json");
                 res.setCharacterEncoding("utf-8");
