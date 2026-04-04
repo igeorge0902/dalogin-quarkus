@@ -6,8 +6,8 @@
                 <div class="hero-ct">
                     <h1>Purchase #{{purchaseId}}</h1>
                     <ul class="breadcumb">
-                        <li class="active"><a href="#!/">Movies</a></li>
-                        <li><span class="ion-ios-arrow-right"></span> <a href="#!/purchases" style="color:#abb7c4;">Purchases</a></li>
+                        <li class="active"><a href="#/movies">Movies</a></li>
+                        <li><span class="ion-ios-arrow-right"></span> <a href="#/purchases" style="color:#abb7c4;">Purchases</a></li>
                         <li><span class="ion-ios-arrow-right"></span> Tickets</li>
                     </ul>
                 </div>
@@ -69,11 +69,11 @@
 
                 <div class="empty-state" ng-if="tickets.length === 0">
                     <h3>No tickets found</h3>
-                    <p><a href="#!/purchases" style="color:#dcf836;">← Back to Purchases</a></p>
+                    <p><a href="#/purchases" style="color:#dcf836;">← Back to Purchases</a></p>
                 </div>
 
                 <div style="text-align:center; margin-top:24px;">
-                    <a href="#!/purchases" style="color:#abb7c4;">← Back to Purchases</a>
+                    <a href="#/purchases" style="color:#abb7c4;">← Back to Purchases</a>
                 </div>
             </div>
         </div>
@@ -87,8 +87,8 @@
 
 <div class="empty-state" ng-if="error">
     <h3>Unable to load tickets</h3>
-    <p>Please make sure you are <a href="/login/" style="color:#dcf836;">logged in</a>.</p>
-    <p><a href="#!/purchases" style="color:#dcf836;">← Back to Purchases</a></p>
+    <p>Please make sure you are <a href="#/login" style="color:#dcf836;">logged in</a>.</p>
+    <p><a href="#/purchases" style="color:#dcf836;">← Back to Purchases</a></p>
 </div>
 
 

@@ -6,8 +6,8 @@
                 <div class="hero-ct">
                     <h1>Now Screening at {{venueName}}</h1>
                     <ul class="breadcumb">
-                        <li class="active"><a href="#!/">Movies</a></li>
-                        <li><span class="ion-ios-arrow-right"></span> <a href="#!/venues-list" style="color:#abb7c4;">Venues</a></li>
+                        <li class="active"><a href="#/movies">Movies</a></li>
+                        <li><span class="ion-ios-arrow-right"></span> <a href="#/venues-list" style="color:#abb7c4;">Venues</a></li>
                         <li><span class="ion-ios-arrow-right"></span> {{venueName}}</li>
                     </ul>
                 </div>
@@ -35,7 +35,7 @@
                 <div class="flex-wrap-movielist" ng-if="movies.length > 0">
                     <div class="movie-item-style-2 movie-item-style-1"
                          ng-repeat="movie in movies track by movie.movieId"
-                         ng-click="go('/dates/' + locationId + '/' + movie.movieId)" style="cursor:pointer;">
+                         ng-click="openDates(movie)" style="cursor:pointer;">
                         <img ng-src="{{imgBase}}{{movie.large_picture}}" alt="{{movie.name}}"
                              onerror="this.src='images/logo1.png'">
                         <div class="hvr-inner">
@@ -56,7 +56,7 @@
                 <div class="empty-state" ng-if="movies.length === 0">
                     <h3>No movies currently screening</h3>
                     <p>This cinema has no active screenings at the moment.</p>
-                    <a href="#!/venues-list" class="btn-book" style="display:inline-block; margin-top:16px; text-decoration:none;">
+                    <a href="#/venues-list" class="btn-book" style="display:inline-block; margin-top:16px; text-decoration:none;">
                         ← Back to Venues
                     </a>
                 </div>
@@ -72,7 +72,7 @@
 
 <div class="empty-state" ng-if="error">
     <h3>Error loading movies</h3>
-    <p><a href="#!/venues-list" style="color:#dcf836;">← Back to Venues</a></p>
+    <p><a href="#/venues-list" style="color:#dcf836;">← Back to Venues</a></p>
 </div>
 
 

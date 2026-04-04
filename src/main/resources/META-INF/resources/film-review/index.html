@@ -4,7 +4,7 @@
     <title>SwiftCinemas – Book Movies</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Dosis:400,700,500|Nunito:300,400,600" />
+    <base href="/login/film-review/">
     <link rel="stylesheet" href="css/plugins.css">
     <link rel="stylesheet" href="css/style.css">
     <!-- Braintree Drop-in UI -->
@@ -122,16 +122,16 @@
                     <span class="sr-only">Toggle navigation</span>
                     <div id="nav-icon1"><span></span><span></span><span></span></div>
                 </div>
-                <a href="#!/"><img class="logo" src="images/logo1.png" alt="SwiftCinemas" width="119" height="58"></a>
+                <a href="#/movies"><img class="logo" src="images/logo1.png" alt="SwiftCinemas" width="119" height="58"></a>
             </div>
             <div class="collapse navbar-collapse flex-parent" id="main-nav">
                 <ul class="nav navbar-nav flex-child-menu menu-left">
-                    <li><a href="#!/">Movies</a></li>
-                    <li><a href="#!/venues-list">Venues</a></li>
-                    <li><a href="#!/purchases">My Purchases</a></li>
+                    <li><a href="#/movies">Movies</a></li>
+                    <li><a href="#/venues-list">Venues</a></li>
+                    <li><a href="#/purchases">My Purchases</a></li>
                 </ul>
                 <ul class="nav navbar-nav flex-child-menu menu-right">
-                    <li ng-if="!isLoggedIn"><a href="#!/login">Log In</a></li>
+                    <li ng-if="!isLoggedIn"><a href="#/login">Log In</a></li>
                     <li ng-if="!isLoggedIn" class="btn signupLink"><a href="/login/register.html">Sign Up</a></li>
                     <li ng-if="isLoggedIn"><a class="nav-user">{{loggedInUser}}</a></li>
                     <li ng-if="isLoggedIn"><a class="nav-logout" ng-click="logout()">Log Out</a></li>
@@ -149,16 +149,16 @@
     <div class="container">
         <div class="flex-parent-ft">
             <div class="flex-child-ft item1">
-                <a href="#!/"><img class="logo" src="images/logo1.png" alt=""></a>
+                <a href="#/movies"><img class="logo" src="images/logo1.png" alt=""></a>
                 <p>SwiftCinemas<br>Book your favourite movies online</p>
             </div>
             <div class="flex-child-ft item2">
                 <h4>Navigation</h4>
                 <ul>
-                    <li><a href="#!/">Movies</a></li>
-                    <li><a href="#!/venues-list">Venues</a></li>
-                    <li><a href="#!/purchases">My Purchases</a></li>
-                    <li><a href="/login/">Login</a></li>
+                    <li><a href="#/movies">Movies</a></li>
+                    <li><a href="#/venues-list">Venues</a></li>
+                    <li><a href="#/purchases">My Purchases</a></li>
+                    <li><a href="#/login">Login</a></li>
                 </ul>
             </div>
             <div class="flex-child-ft item5">
@@ -177,12 +177,12 @@
 <script src="js/jquery.js"></script>
 <script src="js/plugins.js"></script>
 <script src="js/plugins2.js"></script>
-<script src="../movies/oldAngular/angular.min.js"></script>
-<script src="../movies/angular/angular-route.min.js"></script>
-<script src="../movies/js/hmac-sha512.js"></script>
-<script src="../movies/js/enc-base64-min.js"></script>
-<script src="../movies/js/sha3.js"></script>
-<script src="../movies/js/sha512.js"></script>
+<script src="js/angular.min.js"></script>
+<script src="js/angular-route.min.js"></script>
+<script src="js/hmac-sha512.js"></script>
+<script src="js/enc-base64-min.js"></script>
+<script src="js/sha3.js"></script>
+<script src="js/sha512.js"></script>
 <script src="app.js"></script>
 <script src="js/custom.js"></script>
 </body>

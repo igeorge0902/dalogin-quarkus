@@ -6,8 +6,8 @@
                 <div class="hero-ct">
                     <h1>Select Date &amp; Seats</h1>
                     <ul class="breadcumb">
-                        <li class="active"><a href="#!/">Movies</a></li>
-                        <li><span class="ion-ios-arrow-right"></span> <a href="#!/venues/{{movieId}}" style="color:#abb7c4;">Venues</a></li>
+                        <li class="active"><a href="#/movies">Movies</a></li>
+                        <li><span class="ion-ios-arrow-right"></span> <a href="#/venues/{{movieId}}" style="color:#abb7c4;">Venues</a></li>
                         <li><span class="ion-ios-arrow-right"></span> Seats</li>
                     </ul>
                 </div>
@@ -35,11 +35,14 @@
                             ng-options="d.screeningDatesId as d.screeningDate for d in dates">
                         <option value="">— Choose date —</option>
                     </select>
+                    <p style="color:#6b7a8d; font-size:12px; margin-top:4px;" ng-if="!selection.dateId && dates.length > 1">
+                        Choose a date to load the seat map.
+                    </p>
                 </div>
 
                 <div class="empty-state" ng-if="dates.length === 0">
                     <h3>No screening dates available</h3>
-                    <p><a href="#!/venues/{{movieId}}" style="color:#dcf836;">← Choose another venue</a></p>
+                    <p><a href="#/venues/{{movieId}}" style="color:#dcf836;">← Choose another venue</a></p>
                 </div>
 
                 <!-- Loading seats -->
@@ -103,8 +106,8 @@
 
                 <!-- Back navigation -->
                 <div style="text-align:center; margin-top:30px; padding-bottom:30px;">
-                    <a href="#!/venues/{{movieId}}" style="color:#abb7c4; margin-right:20px;">← Choose venue</a>
-                    <a href="#!/" style="color:#abb7c4;">← Browse movies</a>
+                    <a href="#/venues/{{movieId}}" style="color:#abb7c4; margin-right:20px;">← Choose venue</a>
+                    <a href="#/movies" style="color:#abb7c4;">← Browse movies</a>
                 </div>
 
             </div>
@@ -119,7 +122,7 @@
 
 <div class="empty-state" ng-if="error">
     <h3>Error loading data</h3>
-    <p><a href="#!/venues/{{movieId}}" style="color:#dcf836;">← Choose another venue</a></p>
-    <p><a href="#!/" style="color:#dcf836;">← Back to Movies</a></p>
+    <p><a href="#/venues/{{movieId}}" style="color:#dcf836;">← Choose another venue</a></p>
+    <p><a href="#/movies" style="color:#dcf836;">← Back to Movies</a></p>
 </div>
 

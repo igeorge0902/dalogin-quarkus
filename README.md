@@ -12,6 +12,24 @@ Authentication and session gateway for the Cinemas booking platform. Migrated fr
 - **Proxy to mbooks** — `CheckOut`, `GetAllPurchases`, `ManagePurchases` forward requests to the booking service, injecting session-derived headers.
 - **Static UI** — AngularJS 1.x login/register/movies pages served from `src/main/resources/META-INF/resources/`.
 
+## Web UI flow (film-review)
+
+- Canonical flow: `#/login` → `#/movies` → `#/venues/:movieId` → `#/dates/:locationId/:movieId` → `#/checkout`.
+- Default Angular route redirects to `#/login`.
+- After successful login (`POST /login/HelloWorld`), `LoginController` navigates to `#/movies`.
+- Shared web basket/navigation state is frontend-managed via `StateService` in `film-review/app.js`.
+
+## Web proxy endpoints used by AngularJS UI
+
+| Path | Method | Downstream target | Purpose |
+|------|--------|-------------------|---------|
+| `/login/HelloWorld` | POST | local auth gateway | login + session bootstrap |
+| `/login/CheckOut` | GET | mbooks payment client token | fetch Braintree client token |
+| `/login/CheckOut` | POST | mbooks full checkout | submit nonce + seats payload |
+| `/login/GetAllPurchases` | GET | mbooks purchases | list user purchases |
+| `/login/ManagePurchases` | GET | mbooks purchase details | list tickets by purchaseId |
+| `/login/ManagePurchases` | POST | mbooks purchase actions | cancel tickets / delete purchase |
+
 ## Architecture
 
 ```

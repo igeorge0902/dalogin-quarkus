@@ -6,7 +6,7 @@
                 <div class="hero-ct">
                     <h1>Now Screening</h1>
                     <ul class="breadcumb">
-                        <li class="active"><a href="#!/">Home</a></li>
+                        <li class="active"><a href="#/movies">Home</a></li>
                         <li><span class="ion-ios-arrow-right"></span> Movies</li>
                     </ul>
                 </div>
@@ -20,14 +20,17 @@
         <div class="row ipad-width">
             <div class="col-md-12">
                 <div class="topbar-filter">
-                    <p>Found <span>{{(movies | filter:search).length}} movies</span> in total</p>
+                    <p>Found <span>{{filteredMovies().length}} movies</span> in total</p>
+                    <select ng-model="selectedCategory" ng-options="c for c in categories"
+                            class="date-select" style="width:180px; margin:0 12px 0 0; display:inline-block;">
+                    </select>
                     <input type="text" ng-model="search" placeholder="Search movies..."
                            style="background:#0b1a2a; color:#fff; border:1px solid #405266; padding:6px 14px; border-radius:4px; font-size:13px; width:220px;">
                 </div>
                 <div class="flex-wrap-movielist">
                     <div class="movie-item-style-2 movie-item-style-1"
-                         ng-repeat="movie in movies | filter:search track by movie.movieId"
-                         ng-click="go('/venues/' + movie.movieId)" style="cursor:pointer;">
+                         ng-repeat="movie in filteredMovies() track by movie.movieId"
+                         ng-click="selectMovie(movie)" style="cursor:pointer;">
                         <img ng-src="{{imgBase}}{{movie.large_picture}}" alt="{{movie.name}}"
                              onerror="this.src='images/logo1.png'">
                         <div class="hvr-inner">

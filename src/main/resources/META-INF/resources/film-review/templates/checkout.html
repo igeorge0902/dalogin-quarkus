@@ -6,7 +6,7 @@
                 <div class="hero-ct">
                     <h1>Checkout</h1>
                     <ul class="breadcumb">
-                        <li class="active"><a href="#!/">Movies</a></li>
+                        <li class="active"><a href="#/movies">Movies</a></li>
                         <li><span class="ion-ios-arrow-right"></span> Checkout</li>
                     </ul>
                 </div>
@@ -25,7 +25,7 @@
                     <div class="login-notice" ng-if="!dropinReady && !dropinError && !paymentSuccess">
                         <i class="ion-ios-locked"></i>
                         Checkout requires a valid session.
-                        <a href="#!/login" style="color:#dcf836;">Log in</a> if you haven't already.
+                        <a href="#/login" style="color:#dcf836;">Log in</a> if you haven't already.
                     </div>
 
                     <!-- Order summary -->
@@ -47,7 +47,7 @@
                     <!-- Messages -->
                     <div class="alert-err" ng-if="dropinError">
                         {{dropinError}}<br>
-                        <a href="#!/login" style="color:#dcf836; font-weight:600;">Log in here</a> then return to complete your purchase.
+                        <a href="#/login" style="color:#dcf836; font-weight:600;">Log in here</a> then return to complete your purchase.
                     </div>
                     <div class="alert-ok" ng-if="paymentSuccess">Payment successful! {{paymentSuccess}}</div>
                     <div class="alert-err" ng-if="paymentError">{{paymentError}}</div>
@@ -61,10 +61,10 @@
                     </button>
 
                     <div style="text-align:center; margin-top:24px;">
-                        <a href="#!/purchases" style="color:#dcf836;" ng-if="paymentSuccess">View My Purchases</a>
+                        <a href="#/purchases" style="color:#dcf836;" ng-if="paymentSuccess">View My Purchases</a>
                         <span ng-if="paymentSuccess"> &middot; </span>
                         <a ng-click="goBack()" style="color:#abb7c4; cursor:pointer; margin-right:16px;" ng-if="!paymentSuccess">← Back to Seats</a>
-                        <a href="#!/" style="color:#abb7c4;">← Browse Movies</a>
+                        <a href="#/movies" style="color:#abb7c4;">← Browse Movies</a>
                     </div>
                 </div>
             </div>

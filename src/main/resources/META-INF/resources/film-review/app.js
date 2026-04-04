@@ -2,6 +2,26 @@
 
 var app = angular.module('swiftCinemas', ['ngRoute']);
 
+var APP_BASE = (function () {
+    var baseEl = document.querySelector('base');
+    var baseHref = (baseEl && baseEl.getAttribute('href')) || '/login/film-review/';
+    return baseHref.replace(/\/+$/, '');
+})();
+
+var API_BASE = {
+    LOGIN: '/login',
+    BOOK: '/mbooks-1/rest/book',
+    IMAGE: '/simple-service-webapp/webapi/myresource'
+};
+
+function templatePath(name) {
+    return APP_BASE + '/templates/' + name;
+}
+
+function apiUrl(base, path) {
+    return base + path;
+}
+
 /* ================================================================
    HMAC-SHA512 HTTP interceptor (same logic as existing script.js)
    ================================================================ */
@@ -10,14 +30,14 @@ app.config(function ($httpProvider) {
         return {
             request: function (config) {
                 var publicUrls = [
-                    '/mbooks-1/rest/book/movies',
-                    '/mbooks-1/rest/book/locations'
+                    apiUrl(API_BASE.BOOK, '/movies'),
+                    apiUrl(API_BASE.BOOK, '/locations')
                 ];
                 var isPublic = publicUrls.indexOf(config.url) !== -1 ||
-                    config.url.indexOf('/mbooks-1/rest/book/venue/') === 0 ||
-                    config.url.indexOf('/mbooks-1/rest/book/dates/') === 0 ||
-                    config.url.indexOf('/mbooks-1/rest/book/seats/') === 0 ||
-                    config.url.indexOf('/login/') === 0;
+                    config.url.indexOf(apiUrl(API_BASE.BOOK, '/venue/')) === 0 ||
+                    config.url.indexOf(apiUrl(API_BASE.BOOK, '/dates/')) === 0 ||
+                    config.url.indexOf(apiUrl(API_BASE.BOOK, '/seats/')) === 0 ||
+                    config.url.indexOf(API_BASE.LOGIN + '/') === 0;
                 if (!isPublic) {
                     if (!localStorage.sessionToken_) {
                         console.warn('No sessionToken to sign the request');
@@ -64,48 +84,95 @@ app.config(function ($httpProvider) {
 });
 
 /* ================================================================
-   Route configuration — hashbang mode
+   Route configuration — plain hash mode
    ================================================================ */
 app.config(function ($routeProvider, $locationProvider) {
-    $locationProvider.hashPrefix('!');
+    $locationProvider.hashPrefix('');
     $routeProvider
-        .when('/', {
-            templateUrl: 'templates/movies.html',
+        .when('/login', {
+            templateUrl: templatePath('login.html'),
+            controller: 'LoginController'
+        })
+        .when('/change-password', {
+            templateUrl: templatePath('change-password.html'),
+            controller: 'ChangePasswordController'
+        })
+        .when('/movies', {
+            templateUrl: templatePath('movies.html'),
             controller: 'MoviesController'
         })
         .when('/venues-list', {
-            templateUrl: 'templates/venues-list.html',
+            templateUrl: templatePath('venues-list.html'),
             controller: 'VenuesListController'
         })
         .when('/venue-movies/:locationId', {
-            templateUrl: 'templates/venue-movies.html',
+            templateUrl: templatePath('venue-movies.html'),
             controller: 'VenueMoviesController'
         })
         .when('/venues/:movieId', {
-            templateUrl: 'templates/venues.html',
+            templateUrl: templatePath('venues.html'),
             controller: 'VenuesController'
         })
         .when('/dates/:locationId/:movieId', {
-            templateUrl: 'templates/dates.html',
+            templateUrl: templatePath('dates.html'),
             controller: 'DatesSeatsController'
         })
         .when('/checkout', {
-            templateUrl: 'templates/checkout.html',
+            templateUrl: templatePath('checkout.html'),
             controller: 'CheckoutController'
         })
         .when('/purchases', {
-            templateUrl: 'templates/purchases.html',
+            templateUrl: templatePath('purchases.html'),
             controller: 'PurchasesController'
         })
         .when('/purchases/:purchaseId', {
-            templateUrl: 'templates/purchase-detail.html',
+            templateUrl: templatePath('purchase-detail.html'),
             controller: 'PurchaseDetailController'
         })
-        .when('/login', {
-            templateUrl: 'templates/login.html',
-            controller: 'LoginController'
-        })
-        .otherwise({ redirectTo: '/' });
+        .when('/', { redirectTo: '/login' })
+        .otherwise({ redirectTo: '/login' });
+});
+
+/* ================================================================
+   Shared booking state (movie/venue/date/seats) with session backup
+   ================================================================ */
+app.factory('StateService', function () {
+    var KEY = 'filmReviewState';
+    var state = {
+        selectedMovie: null,
+        selectedVenue: null,
+        selectedDateId: null,
+        selectedSeats: []
+    };
+
+    try {
+        var fromStorage = JSON.parse(sessionStorage.getItem(KEY) || '{}');
+        if (fromStorage && typeof fromStorage === 'object') {
+            state.selectedMovie = fromStorage.selectedMovie || null;
+            state.selectedVenue = fromStorage.selectedVenue || null;
+            state.selectedDateId = fromStorage.selectedDateId || null;
+            state.selectedSeats = fromStorage.selectedSeats || [];
+        }
+    } catch (e) {
+        sessionStorage.removeItem(KEY);
+    }
+
+    function persist() {
+        sessionStorage.setItem(KEY, JSON.stringify(state));
+    }
+
+    return {
+        getState: function () { return state; },
+        setSelectedMovie: function (movie) { state.selectedMovie = movie || null; persist(); },
+        setSelectedVenue: function (venue) { state.selectedVenue = venue || null; persist(); },
+        setSelectedDateId: function (dateId) { state.selectedDateId = dateId || null; persist(); },
+        setSelectedSeats: function (seats) { state.selectedSeats = seats || []; persist(); },
+        clearBooking: function () {
+            state.selectedDateId = null;
+            state.selectedSeats = [];
+            persist();
+        }
+    };
 });
 
 /* ================================================================
@@ -123,7 +190,7 @@ app.run(function ($rootScope, $location, $http) {
     // Check if we have an existing valid session on startup
     // Use a lightweight session-protected endpoint to probe
     if (localStorage.getItem('filmReviewUser')) {
-        $http({ method: 'GET', url: '/login/GetAllPurchases', headers: { Accept: 'application/json' } })
+        $http({ method: 'GET', url: apiUrl(API_BASE.LOGIN, '/GetAllPurchases'), headers: { Accept: 'application/json' } })
             .success(function () {
                 $rootScope.isLoggedIn = true;
                 $rootScope.loggedInUser = localStorage.getItem('filmReviewUser');
@@ -138,19 +205,19 @@ app.run(function ($rootScope, $location, $http) {
 
     // Logout
     $rootScope.logout = function () {
-        $http({ method: 'GET', url: '/login/logout' })
+        $http({ method: 'GET', url: apiUrl(API_BASE.LOGIN, '/logout') })
             .success(function () {
                 $rootScope.isLoggedIn = false;
                 $rootScope.loggedInUser = '';
                 localStorage.removeItem('filmReviewUser');
-                $location.path('/');
+                $location.path('/login');
             })
             .error(function () {
                 // Even if logout call fails, clear local state
                 $rootScope.isLoggedIn = false;
                 $rootScope.loggedInUser = '';
                 localStorage.removeItem('filmReviewUser');
-                $location.path('/');
+                $location.path('/login');
             });
     };
 });
@@ -203,7 +270,7 @@ app.controller('LoginController', function ($scope, $http, $rootScope, $location
         // 5) Compute login HMAC
         var microTime = new Date().getTime();
         var loginHmac = CryptoJS.HmacSHA512(
-            '/login/HelloWorld:' + body + ':' + microTime + ':' + body.length,
+            apiUrl(API_BASE.LOGIN, '/HelloWorld') + ':' + body + ':' + microTime + ':' + body.length,
             hmacSecretB64
         );
         var hmacHash = CryptoJS.enc.Base64.stringify(loginHmac);
@@ -213,7 +280,7 @@ app.controller('LoginController', function ($scope, $http, $rootScope, $location
         //    the login has its own HMAC formula matching the original /login/ page.
         $http({
             method: 'POST',
-            url: '/login/HelloWorld',
+            url: apiUrl(API_BASE.LOGIN, '/HelloWorld'),
             data: body,
             transformRequest: function (data) { return data; },
             headers: {
@@ -233,7 +300,7 @@ app.controller('LoginController', function ($scope, $http, $rootScope, $location
                 localStorage.setItem('filmReviewUser', username);
                 $rootScope.isLoggedIn = true;
                 $rootScope.loggedInUser = username;
-                $location.path('/');
+                $location.path('/movies');
             } else {
                 $scope.errorMsg = 'Login failed. Please check your credentials.';
             }
@@ -245,26 +312,156 @@ app.controller('LoginController', function ($scope, $http, $rootScope, $location
 });
 
 /* ================================================================
+   ChangePasswordController — email/code/new-password reset flow
+   ================================================================ */
+app.controller('ChangePasswordController', function ($scope, $http, $location) {
+    $scope.email = '';
+    $scope.uuid = '';
+    $scope.confirmationCode = '';
+    $scope.password = '';
+    $scope.modelE = { isDisabled: false };
+    $scope.modelC = { isDisabled: true };
+    $scope.modelP = { isDisabled: true };
+
+    $scope.errorMsg = '';
+    $scope.successMsg = '';
+    $scope.error_Msg = '';
+    $scope.success_Msg = '';
+    $scope.errorMsg_ = '';
+    $scope.successMsg_ = '';
+
+    function deviceGuid() {
+        var nav = window.navigator;
+        var scr = window.screen;
+        var g = (nav.mimeTypes ? nav.mimeTypes.length : 0);
+        g += nav.userAgent.replace(/\D+/g, '');
+        g += (nav.plugins ? nav.plugins.length : 0);
+        g += scr.height || '';
+        g += scr.width || '';
+        g += scr.pixelDepth || '';
+        return g;
+    }
+
+    $scope.clearErrorMsg = function () {
+        $scope.errorMsg = '';
+    };
+
+    $scope.forgetPsw = function () {
+        if (!$scope.email) return;
+        $scope.uuid = deviceGuid();
+        var encodedString = 'email=' + encodeURIComponent($scope.email) +
+            '&deviceId=' + encodeURIComponent($scope.uuid);
+
+        $http({
+            method: 'POST',
+            url: apiUrl(API_BASE.LOGIN, '/forgotPSw'),
+            data: encodedString,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }
+        }).success(function (data) {
+            if (data.Success === 'true') {
+                $scope.successMsg = data;
+                $scope.errorMsg = '';
+                $scope.modelE.isDisabled = true;
+                $scope.modelC.isDisabled = false;
+                $scope.modelP.isDisabled = true;
+            } else {
+                $scope.errorMsg = data;
+            }
+        }).error(function (data) {
+            $scope.errorMsg = data || 'Failed to request reset code.';
+        });
+    };
+
+    $scope.enterCode = function () {
+        if (!$scope.email || !$scope.confirmationCode) return;
+        var codeHash = CryptoJS.SHA512($scope.confirmationCode, { outputLength: 512 });
+        var encodedString = 'email=' + encodeURIComponent($scope.email) +
+            '&cC=' + encodeURIComponent(codeHash) +
+            '&deviceId=' + encodeURIComponent($scope.uuid || deviceGuid());
+
+        $http({
+            method: 'POST',
+            url: apiUrl(API_BASE.LOGIN, '/forgotPSwCode'),
+            data: encodedString,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }
+        }).success(function (data) {
+            $scope.success_Msg = data;
+            $scope.error_Msg = '';
+            $scope.modelE.isDisabled = true;
+            $scope.modelC.isDisabled = true;
+            $scope.modelP.isDisabled = false;
+        }).error(function (data) {
+            $scope.error_Msg = data || 'Invalid confirmation code.';
+        });
+    };
+
+    $scope.changePSw = function () {
+        if (!$scope.email || !$scope.confirmationCode || !$scope.password) return;
+        var passHash = CryptoJS.SHA3($scope.password, { outputLength: 512 });
+        var codeHash = CryptoJS.SHA512($scope.confirmationCode, { outputLength: 512 });
+        var encodedString = 'email=' + encodeURIComponent($scope.email) +
+            '&cC=' + encodeURIComponent(codeHash) +
+            '&pass=' + encodeURIComponent(passHash) +
+            '&deviceId=' + encodeURIComponent($scope.uuid || deviceGuid());
+
+        $http({
+            method: 'POST',
+            url: apiUrl(API_BASE.LOGIN, '/forgotPSwNewPSw'),
+            data: encodedString,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }
+        }).success(function (data) {
+            if (data.Success === 'true') {
+                $scope.successMsg_ = data;
+                $scope.errorMsg_ = '';
+                $scope.modelP.isDisabled = true;
+                $scope.password = '';
+                setTimeout(function () {
+                    $scope.$apply(function () { $location.path('/login'); });
+                }, 600);
+            } else {
+                $scope.errorMsg_ = data;
+            }
+        }).error(function (data) {
+            $scope.errorMsg_ = data || 'Failed to update password.';
+        });
+    };
+});
+
+/* ================================================================
    Image helper
    ================================================================ */
-var IMG_BASE = '/simple-service-webapp/webapi/myresource';
+var IMG_BASE = API_BASE.IMAGE;
 
 /* ================================================================
    MoviesController — movie grid
    ================================================================ */
-app.controller('MoviesController', function ($scope, $http) {
+app.controller('MoviesController', function ($scope, $http, StateService, $location) {
     $scope.movies = [];
     $scope.loading = true;
     $scope.loadError = false;
     $scope.search = '';
+    $scope.categories = ['All'];
+    $scope.selectedCategory = 'All';
+
+    function movieCategory(movie) {
+        return movie.category || movie.categoryName || movie.genre || movie.genres || 'Uncategorized';
+    }
 
     $http({
         method: 'GET',
-        url: '/mbooks-1/rest/book/movies',
+        url: apiUrl(API_BASE.BOOK, '/movies'),
         headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Token': 'client-secret' }
     }).success(function (data, status, headers) {
         localStorage.sessionToken_ = headers('APIKEY');
         $scope.movies = data.movies || [];
+        var seen = {};
+        $scope.movies.forEach(function (movie) {
+            var cat = movieCategory(movie);
+            if (!seen[cat]) {
+                seen[cat] = true;
+                $scope.categories.push(cat);
+            }
+        });
         $scope.loading = false;
     }).error(function () {
         $scope.loadError = true;
@@ -272,12 +469,29 @@ app.controller('MoviesController', function ($scope, $http) {
     });
 
     $scope.imgBase = IMG_BASE;
+
+    $scope.selectMovie = function (movie) {
+        StateService.setSelectedMovie({ movieId: movie.movieId, name: movie.name });
+        $location.path('/venues/' + movie.movieId);
+    };
+
+    $scope.filteredMovies = function () {
+        var term = ($scope.search || '').toLowerCase();
+        return $scope.movies.filter(function (movie) {
+            var inCategory = $scope.selectedCategory === 'All' || movieCategory(movie) === $scope.selectedCategory;
+            if (!inCategory) return false;
+            if (!term) return true;
+            var title = (movie.name || '').toLowerCase();
+            var detail = (movie.detail || '').toLowerCase();
+            return title.indexOf(term) >= 0 || detail.indexOf(term) >= 0;
+        });
+    };
 });
 
 /* ================================================================
    VenuesController — location selection for a movie
    ================================================================ */
-app.controller('VenuesController', function ($scope, $http, $routeParams) {
+app.controller('VenuesController', function ($scope, $http, $routeParams, $location, StateService) {
     $scope.movieId = $routeParams.movieId;
     $scope.locations = [];
     $scope.loading = true;
@@ -285,7 +499,7 @@ app.controller('VenuesController', function ($scope, $http, $routeParams) {
 
     $http({
         method: 'GET',
-        url: '/mbooks-1/rest/book/venue/v2/' + $scope.movieId,
+        url: apiUrl(API_BASE.BOOK, '/venue/v2/') + $scope.movieId,
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
     }).success(function (data) {
         $scope.locations = data.locations || [];
@@ -296,12 +510,21 @@ app.controller('VenuesController', function ($scope, $http, $routeParams) {
     });
 
     $scope.imgBase = IMG_BASE;
+
+    $scope.openDates = function (loc) {
+        StateService.setSelectedVenue({
+            locationId: loc.locationId,
+            name: loc.name,
+            picture: loc.thumbnail
+        });
+        $location.path('/dates/' + loc.locationId + '/' + $scope.movieId);
+    };
 });
 
 /* ================================================================
    DatesSeatsController — date picker + seat map with multi-select
    ================================================================ */
-app.controller('DatesSeatsController', function ($scope, $http, $routeParams, $location) {
+app.controller('DatesSeatsController', function ($scope, $http, $routeParams, $location, StateService) {
     $scope.locationId = $routeParams.locationId;
     $scope.movieId = $routeParams.movieId;
     $scope.dates = [];
@@ -314,13 +537,34 @@ app.controller('DatesSeatsController', function ($scope, $http, $routeParams, $l
     $scope.seatsError = false;
     $scope.error = false;
 
+    // Route params remain source of truth; state only helps after refresh/navigation.
+    var persistedState = StateService.getState();
+    if (!$scope.movieId && persistedState.selectedMovie) {
+        $scope.movieId = persistedState.selectedMovie.movieId;
+    }
+    if (!$scope.locationId && persistedState.selectedVenue) {
+        $scope.locationId = persistedState.selectedVenue.locationId;
+    }
+
     // Fetch dates
     $http({
         method: 'GET',
-        url: '/mbooks-1/rest/book/dates/' + $scope.locationId + '/' + $scope.movieId,
+        url: apiUrl(API_BASE.BOOK, '/dates/') + $scope.locationId + '/' + $scope.movieId,
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
     }).success(function (data) {
         $scope.dates = data.dates || [];
+        var persistedDateId = persistedState.selectedDateId;
+        if (persistedDateId) {
+            var hasPersisted = $scope.dates.some(function (d) { return String(d.screeningDatesId) === String(persistedDateId); });
+            if (hasPersisted) {
+                $scope.selection.dateId = Number(persistedDateId);
+                $scope.onDateChange();
+            }
+        }
+        if (!$scope.selection.dateId && $scope.dates.length === 1) {
+            $scope.selection.dateId = $scope.dates[0].screeningDatesId;
+            $scope.onDateChange();
+        }
         $scope.loading = false;
     }).error(function (data, status) {
         console.error('Failed to load dates', status, data);
@@ -352,12 +596,13 @@ app.controller('DatesSeatsController', function ($scope, $http, $routeParams, $l
     $scope.onDateChange = function () {
         console.log('[DatesSeats] onDateChange fired, dateId=', $scope.selection.dateId, typeof $scope.selection.dateId);
         if (!$scope.selection.dateId) return;
+        StateService.setSelectedDateId(String($scope.selection.dateId));
         $scope.seats = [];
         $scope.seatRows = [];
         $scope.seatsLoading = true;
         $scope.seatsError = false;
 
-        var seatsUrl = '/mbooks-1/rest/book/seats/' + $scope.selection.dateId;
+        var seatsUrl = apiUrl(API_BASE.BOOK, '/seats/') + $scope.selection.dateId;
         console.log('[DatesSeats] Fetching seats from:', seatsUrl);
 
         $http({
@@ -382,6 +627,7 @@ app.controller('DatesSeatsController', function ($scope, $http, $routeParams, $l
     $scope.toggleSeat = function (seat) {
         if (seat.isReserved === '1') return;
         seat.selected = !seat.selected;
+        StateService.setSelectedSeats($scope.getSelectedSeats());
     };
 
     $scope.getSelectedSeats = function () {
@@ -414,6 +660,7 @@ app.controller('DatesSeatsController', function ($scope, $http, $routeParams, $l
         sessionStorage.setItem('checkout_seats_payload', seatsPayload);
         sessionStorage.setItem('checkout_total', $scope.getTotal());
         sessionStorage.setItem('checkout_screeningDateId', String($scope.selection.dateId));
+        StateService.setSelectedSeats(selected);
         $location.path('/checkout');
     };
 });
@@ -421,10 +668,12 @@ app.controller('DatesSeatsController', function ($scope, $http, $routeParams, $l
 /* ================================================================
    CheckoutController — Braintree Drop-in + payment
    ================================================================ */
-app.controller('CheckoutController', function ($scope, $http, $window) {
-    $scope.selectedSeatIds = sessionStorage.getItem('checkout_seats') || '';
-    $scope.totalAmount = sessionStorage.getItem('checkout_total') || '0';
-    var screeningDateId = sessionStorage.getItem('checkout_screeningDateId') || '';
+app.controller('CheckoutController', function ($scope, $http, $window, StateService) {
+    var currentState = StateService.getState();
+    $scope.selectedSeatIds = sessionStorage.getItem('checkout_seats') ||
+        (currentState.selectedSeats || []).map(function (s) { return s.seatNumber; }).join(', ');
+    $scope.totalAmount = sessionStorage.getItem('checkout_total') ||
+        (currentState.selectedSeats || []).reduce(function (sum, s) { return sum + (s.price || 0); }, 0);
     var seatsPayload = sessionStorage.getItem('checkout_seats_payload') || '';
 
     $scope.dropinReady = false;
@@ -441,7 +690,7 @@ app.controller('CheckoutController', function ($scope, $http, $window) {
     // 1) Fetch client token
     $http({
         method: 'GET',
-        url: '/login/CheckOut',
+        url: apiUrl(API_BASE.LOGIN, '/CheckOut'),
         headers: { Accept: 'application/json' }
     }).success(function (data) {
         var clientToken = data.clientToken;
@@ -502,7 +751,7 @@ app.controller('CheckoutController', function ($scope, $http, $window) {
 
             $http({
                 method: 'POST',
-                url: '/login/CheckOut',
+                url: apiUrl(API_BASE.LOGIN, '/CheckOut'),
                 data: postData,
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
             }).success(function (data) {
@@ -513,6 +762,7 @@ app.controller('CheckoutController', function ($scope, $http, $window) {
                     sessionStorage.removeItem('checkout_seats_payload');
                     sessionStorage.removeItem('checkout_total');
                     sessionStorage.removeItem('checkout_screeningDateId');
+                    StateService.clearBooking();
                 } else {
                     $scope.paymentError = 'Transaction failed: ' + (data.ResponseText || 'Unknown error');
                 }
@@ -534,7 +784,7 @@ app.controller('VenuesListController', function ($scope, $http) {
 
     $http({
         method: 'GET',
-        url: '/mbooks-1/rest/book/locations',
+        url: apiUrl(API_BASE.BOOK, '/locations'),
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
     }).success(function (data) {
         $scope.locations = data.locations || [];
@@ -550,7 +800,7 @@ app.controller('VenuesListController', function ($scope, $http) {
 /* ================================================================
    VenueMoviesController — movies screening at a selected venue
    ================================================================ */
-app.controller('VenueMoviesController', function ($scope, $http, $routeParams) {
+app.controller('VenueMoviesController', function ($scope, $http, $routeParams, $location, StateService) {
     $scope.locationId = $routeParams.locationId;
     $scope.movies = [];
     $scope.venueName = '';
@@ -560,7 +810,7 @@ app.controller('VenueMoviesController', function ($scope, $http, $routeParams) {
 
     $http({
         method: 'GET',
-        url: '/mbooks-1/rest/book/venue/movies?locationId=' + $scope.locationId,
+        url: apiUrl(API_BASE.BOOK, '/venue/movies?locationId=') + $scope.locationId,
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
     }).success(function (data) {
         $scope.movies = data.movies || [];
@@ -576,6 +826,11 @@ app.controller('VenueMoviesController', function ($scope, $http, $routeParams) {
     });
 
     $scope.imgBase = IMG_BASE;
+
+    $scope.openDates = function (movie) {
+        StateService.setSelectedMovie({ movieId: movie.movieId, name: movie.name });
+        $location.path('/dates/' + $scope.locationId + '/' + movie.movieId);
+    };
 });
 
 /* ================================================================
@@ -588,7 +843,7 @@ app.controller('PurchasesController', function ($scope, $http) {
 
     $http({
         method: 'GET',
-        url: '/login/GetAllPurchases',
+        url: apiUrl(API_BASE.LOGIN, '/GetAllPurchases'),
         headers: { Accept: 'application/json' }
     }).success(function (data) {
         $scope.purchases = data.purchases || [];
@@ -604,7 +859,7 @@ app.controller('PurchasesController', function ($scope, $http) {
         if (!confirm('Delete this entire purchase? This cannot be undone.')) return;
         $http({
             method: 'POST',
-            url: '/login/ManagePurchases',
+            url: apiUrl(API_BASE.LOGIN, '/ManagePurchases'),
             data: 'purchaseId=' + encodeURIComponent(purchaseId),
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         }).success(function () {
@@ -631,7 +886,7 @@ app.controller('PurchaseDetailController', function ($scope, $http, $routeParams
     var loadTickets = function () {
         $http({
             method: 'GET',
-            url: '/login/ManagePurchases?purchaseId=' + $scope.purchaseId,
+            url: apiUrl(API_BASE.LOGIN, '/ManagePurchases?purchaseId=') + $scope.purchaseId,
             headers: { Accept: 'application/json' }
         }).success(function (data) {
             $scope.tickets = data.tickets || [];
@@ -667,7 +922,7 @@ app.controller('PurchaseDetailController', function ($scope, $http, $routeParams
 
         $http({
             method: 'POST',
-            url: '/login/ManagePurchases',
+            url: apiUrl(API_BASE.LOGIN, '/ManagePurchases'),
             data: 'purchaseId=' + encodeURIComponent($scope.purchaseId) +
                   '&ticketsToBeCancelled=' + encodeURIComponent(ticketsPayload),
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }

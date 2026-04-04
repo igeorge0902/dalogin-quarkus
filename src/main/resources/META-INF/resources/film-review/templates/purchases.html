@@ -6,7 +6,7 @@
                 <div class="hero-ct">
                     <h1>My Purchases</h1>
                     <ul class="breadcumb">
-                        <li class="active"><a href="#!/">Movies</a></li>
+                        <li class="active"><a href="#/movies">Movies</a></li>
                         <li><span class="ion-ios-arrow-right"></span> Purchases</li>
                     </ul>
                 </div>
@@ -35,7 +35,7 @@
                             <p><i class="ion-ios-calendar"></i> {{p.screeningDate}}</p>
                             <p class="purchase-meta">Order #{{p.orderId}} &middot; {{p.purchaseDate}}</p>
                             <div class="purchase-actions">
-                                <a ng-href="#!/purchases/{{p.purchaseId}}" class="btn-detail">
+                                <a ng-href="#/purchases/{{p.purchaseId}}" class="btn-detail">
                                     View Tickets
                                 </a>
                                 <button class="btn-delete" ng-click="deletePurchase(p.purchaseId)">
@@ -49,7 +49,7 @@
                 <div class="empty-state" ng-if="purchases.length === 0">
                     <h3>No purchases yet</h3>
                     <p>Browse movies and book your first screening!</p>
-                    <a href="#!/" class="btn-book" style="display:inline-block; margin-top:16px; text-decoration:none;">
+                    <a href="#/movies" class="btn-book" style="display:inline-block; margin-top:16px; text-decoration:none;">
                         ← Browse Movies
                     </a>
                 </div>
@@ -65,8 +65,8 @@
 
 <div class="empty-state" ng-if="error">
     <h3>Unable to load purchases</h3>
-    <p>Please make sure you are <a href="/login/" style="color:#dcf836;">logged in</a>.</p>
-    <p><a href="#!/" style="color:#dcf836;">← Browse Movies</a></p>
+    <p>Please make sure you are <a href="#/login" style="color:#dcf836;">logged in</a>.</p>
+    <p><a href="#/movies" style="color:#dcf836;">← Browse Movies</a></p>
 </div>
 
 
