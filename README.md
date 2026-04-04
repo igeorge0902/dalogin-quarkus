@@ -15,9 +15,11 @@ Authentication and session gateway for the Cinemas booking platform. Migrated fr
 ## Web UI flow (film-review)
 
 - Canonical flow: `#/login` → `#/movies` → `#/venues/:movieId` → `#/dates/:locationId/:movieId` → `#/checkout`.
+- Browser entrypoint: `/login/film-review/` (use `#/...` routes, not `#!/...`).
 - Default Angular route redirects to `#/login`.
 - After successful login (`POST /login/HelloWorld`), `LoginController` navigates to `#/movies`.
 - Shared web basket/navigation state is frontend-managed via `StateService` in `film-review/app.js`.
+- Legacy login/register scripts are consolidated under `src/main/resources/META-INF/resources/film-review/jsR/` and loaded from `/login/film-review/jsR/...`.
 
 ## Web proxy endpoints used by AngularJS UI
 
