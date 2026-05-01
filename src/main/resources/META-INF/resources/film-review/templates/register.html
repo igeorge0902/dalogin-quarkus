@@ -1,0 +1,88 @@
+<!-- register.html — Film-Review in-app registration -->
+<div class="hero common-hero">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="hero-ct">
+                    <h1>Register</h1>
+                    <ul class="breadcumb">
+                        <li class="active"><a href="#/movies">Home</a></li>
+                        <li><span class="ion-ios-arrow-right"></span> Register</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-single">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-5 col-md-offset-3">
+                <div class="login-wrap">
+                    <form novalidate ng-submit="register()">
+                        <div class="login-field">
+                            <label style="color:#abb7c4; display:block; margin-bottom:4px;">Username</label>
+                            <input type="text" ng-model="form.username" ng-change="clearDialog(); checkUsername(false)" ng-blur="checkUsername(true)" placeholder="Choose username"
+                                   class="date-select" style="margin:0 0 6px;" autocomplete="username" autofocus>
+                            <small ng-if="form.username && form.username.length < 2" style="color:#abb7c4;">Type at least 2 characters to check availability</small>
+                            <small ng-if="usernameState === 'checking'" style="color:#abb7c4;">Checking username...</small>
+                            <small ng-if="usernameState === 'available'" style="color:#2e7d32;">Username available</small>
+                            <small ng-if="usernameState === 'taken'" style="color:#e94560;">Username already taken</small>
+                            <small ng-if="usernameState === 'unknown'" style="color:#e2b93b;">Could not validate username right now</small>
+                        </div>
+
+                        <div class="login-field" style="margin-top:10px;">
+                            <label style="color:#abb7c4; display:block; margin-bottom:4px;">Email</label>
+                            <input type="email" ng-model="form.email" ng-change="clearDialog(); checkEmail(false)" ng-blur="checkEmail(true)" placeholder="Email address"
+                                   class="date-select" style="margin:0 0 6px;" autocomplete="email">
+                            <small ng-if="form.email && !isFullEmail(form.email)" style="color:#abb7c4;">Enter a full email (e.g. name@example.com) to check availability</small>
+                            <small ng-if="emailState === 'checking'" style="color:#abb7c4;">Checking email...</small>
+                            <small ng-if="emailState === 'available'" style="color:#2e7d32;">Email available</small>
+                            <small ng-if="emailState === 'taken'" style="color:#e94560;">Email already taken</small>
+                            <small ng-if="emailState === 'unknown'" style="color:#e2b93b;">Could not validate email right now</small>
+                        </div>
+
+                        <div class="login-field" style="margin-top:10px;">
+                            <label style="color:#abb7c4; display:block; margin-bottom:4px;">Password</label>
+                            <input type="password" ng-model="form.password" ng-change="clearDialog()" placeholder="Choose password"
+                                   class="date-select" style="margin:0 0 12px;" autocomplete="new-password">
+                        </div>
+
+                        <div class="login-field" style="margin-top:4px; margin-bottom:10px;">
+                            <label style="color:#abb7c4; display:block; margin-bottom:6px;">
+                                <input type="checkbox" ng-model="form.useVoucher" style="margin-right:6px;"> Use voucher
+                            </label>
+                            <input ng-if="form.useVoucher" type="text" ng-model="form.voucher" ng-change="clearDialog()" placeholder="Voucher code"
+                                   class="date-select" style="margin:0 0 6px;">
+                        </div>
+
+                        <div ng-if="dialog" style="margin-bottom:14px;">
+                            <div class="alert-ok" ng-if="dialog.type === 'success'">{{dialog.text}}</div>
+                            <div class="alert-err" ng-if="dialog.type === 'error'">{{dialog.text}}</div>
+                            <div class="alert-warn" ng-if="dialog.type === 'warn'">{{dialog.text}}</div>
+                        </div>
+
+                        <div ng-if="activationPending" style="margin-bottom:14px; text-align:center;">
+                            <button type="button" class="btn-book" style="width:100%;" ng-click="resendActivation()" ng-disabled="activationResendBusy">
+                                <span ng-if="!activationResendBusy">Resend activation email</span>
+                                <span ng-if="activationResendBusy">Sending activation email...</span>
+                            </button>
+                        </div>
+
+                        <button type="submit" class="btn-book" style="width:100%;"
+                                ng-disabled="processing || !canSubmit()">
+                            <span ng-if="!processing">Create account</span>
+                            <span ng-if="processing">Registering...</span>
+                        </button>
+                    </form>
+
+                    <div style="text-align:center; margin-top:20px;">
+                        <a href="#/login" style="color:#abb7c4; font-size:13px;">Already have an account? Log in</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

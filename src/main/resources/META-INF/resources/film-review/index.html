@@ -42,6 +42,7 @@
         #dropin-container { min-height: 60px; }
         .alert-ok { background: #1e6f30; color: #fff; padding: 14px; border-radius: 6px; margin: 12px 0; }
         .alert-err { background: #dd003f; color: #fff; padding: 14px; border-radius: 6px; margin: 12px 0; }
+        .alert-warn { background: #8a6d1f; color: #fff; padding: 14px; border-radius: 6px; margin: 12px 0; }
         /* ── Venue cards ── */
         .venue-card { background: rgba(255,255,255,.04); border-radius: 8px; overflow: hidden; margin-bottom: 20px; transition: .2s; display: block; text-decoration: none; }
         .venue-card:hover { background: rgba(255,255,255,.08); }
@@ -132,7 +133,7 @@
                 </ul>
                 <ul class="nav navbar-nav flex-child-menu menu-right">
                     <li ng-if="!isLoggedIn"><a href="#/login">Log In</a></li>
-                    <li ng-if="!isLoggedIn" class="btn signupLink"><a href="/login/register.html">Sign Up</a></li>
+                    <li ng-if="!isLoggedIn" class="btn signupLink"><a href="#/register">Sign Up</a></li>
                     <li ng-if="isLoggedIn"><a class="nav-user">{{loggedInUser}}</a></li>
                     <li ng-if="isLoggedIn"><a class="nav-logout" ng-click="logout()">Log Out</a></li>
                 </ul>

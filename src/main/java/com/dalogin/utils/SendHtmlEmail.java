@@ -11,39 +11,48 @@ import org.apache.log4j.Logger;
 import java.util.Properties;
 
 public class SendHtmlEmail {
+
     private static final Logger log = Logger.getLogger(Logger.class.getName());
 
     /**
-     * @param email
-     * @param url
-     * @return
-     * @throws Exception
+     * @param email recipient email
+     * @param url   target url
+     * @return true if sent
+     * @throws Exception on mail errors
      */
     public static boolean generateAndSendEmail(String email, String url) throws Exception {
-        // Step1
+        // Step 1
         log.info("\n 1st ===> setup Mail Server Properties..");
         Properties mailServerProperties = System.getProperties();
         mailServerProperties.put("mail.smtp.port", "587");
         mailServerProperties.put("mail.smtp.auth", "true");
         mailServerProperties.put("mail.smtp.starttls.enable", "true");
         log.info("Mail Server Properties have been setup successfully..");
-        // Step2
+
+        // Step 2
         log.info("\n\n 2nd ===> get Mail Session..");
         Session getMailSession = Session.getDefaultInstance(mailServerProperties, null);
         MimeMessage generateMailMessage = new MimeMessage(getMailSession);
         generateMailMessage.addRecipient(Message.RecipientType.TO, new InternetAddress(email));
         generateMailMessage.setSubject("Greetings from Crunchify..");
+
         String emailBody = "Test email: " + url + "<br><br> Regards, <br>GG";
         generateMailMessage.setContent(emailBody, "text/html");
         log.info("Mail Session has been created successfully..");
-        // Step3
+
+        // Step 3
         log.info("\n\n 3rd ===> Get Session and Send mail");
         Transport transport = getMailSession.getTransport("smtp");
         // Enter your correct gmail UserID and Password
         // if you have 2FA enabled then provide App Specific Password
-        transport.connect(CustomServletContextListener.gmail_smtp, CustomServletContextListener.gmail_username, CustomServletContextListener.gmail_password);
+        transport.connect(
+                CustomServletContextListener.gmail_smtp,
+                CustomServletContextListener.gmail_username,
+                CustomServletContextListener.gmail_password
+        );
         transport.sendMessage(generateMailMessage, generateMailMessage.getAllRecipients());
         transport.close();
+
         return true;
     }
 }

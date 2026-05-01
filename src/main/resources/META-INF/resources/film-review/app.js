@@ -11,6 +11,7 @@ var APP_BASE = (function () {
 var API_BASE = {
     LOGIN: '/login',
     BOOK: '/mbooks-1/rest/book',
+    USER: '/mbook-1/rest',
     IMAGE: '/simple-service-webapp/webapi/myresource'
 };
 
@@ -26,7 +27,7 @@ function apiUrl(base, path) {
    HMAC-SHA512 HTTP interceptor (same logic as existing script.js)
    ================================================================ */
 app.config(function ($httpProvider) {
-    $httpProvider.interceptors.push(function ($q) {
+    $httpProvider.interceptors.push(function ($q, $rootScope) {
         return {
             request: function (config) {
                 var publicUrls = [
@@ -37,6 +38,8 @@ app.config(function ($httpProvider) {
                     config.url.indexOf(apiUrl(API_BASE.BOOK, '/venue/')) === 0 ||
                     config.url.indexOf(apiUrl(API_BASE.BOOK, '/dates/')) === 0 ||
                     config.url.indexOf(apiUrl(API_BASE.BOOK, '/seats/')) === 0 ||
+                    config.url.indexOf(apiUrl(API_BASE.USER, '/newuser/')) === 0 ||
+                    config.url.indexOf(apiUrl(API_BASE.USER, '/newemail/')) === 0 ||
                     config.url.indexOf(API_BASE.LOGIN + '/') === 0;
                 if (!isPublic) {
                     if (!localStorage.sessionToken_) {
@@ -47,7 +50,12 @@ app.config(function ($httpProvider) {
                 config.headers['X-URL'] = config.url;
                 return config || $q.when(config);
             },
-            responseError: function (r) { return $q.reject(r); },
+            responseError: function (r) {
+                if (r && r.status === 300) {
+                    $rootScope.$broadcast('activation-required', r);
+                }
+                return $q.reject(r);
+            },
             requestError: function (r) { console.log(r); return $q.reject(r); },
             response: function (r) { return r || $q.when(r); }
         };
@@ -92,6 +100,10 @@ app.config(function ($routeProvider, $locationProvider) {
         .when('/login', {
             templateUrl: templatePath('login.html'),
             controller: 'LoginController'
+        })
+        .when('/register', {
+            templateUrl: templatePath('register.html'),
+            controller: 'RegistrationController'
         })
         .when('/change-password', {
             templateUrl: templatePath('change-password.html'),
@@ -186,6 +198,14 @@ app.run(function ($rootScope, $location, $http) {
     // Auth state (shared across all controllers via $rootScope)
     $rootScope.isLoggedIn = false;
     $rootScope.loggedInUser = '';
+    $rootScope.activationRequiredState = null;
+
+    $rootScope.$on('activation-required', function (evt, rejection) {
+        $rootScope.activationRequiredState = {
+            at: Date.now(),
+            url: rejection && rejection.config ? rejection.config.url : null
+        };
+    });
 
     // Check if we have an existing valid session on startup
     // Use a lightweight session-protected endpoint to probe
@@ -304,8 +324,12 @@ app.controller('LoginController', function ($scope, $http, $rootScope, $location
             } else {
                 $scope.errorMsg = 'Login failed. Please check your credentials.';
             }
-        }).error(function (data) {
+        }).error(function (data, status) {
             $scope.processing = false;
+            if (status === 300) {
+                $scope.errorMsg = 'Activation is required before protected access. Please open Register to resend activation email.';
+                return;
+            }
             $scope.errorMsg = 'Login failed. Please check your username and password.';
         });
     };
@@ -936,3 +960,328 @@ app.controller('PurchaseDetailController', function ($scope, $http, $routeParams
     };
 });
 
+/* ================================================================
+   RegistrationController — Film-Review in-app registration
+   ================================================================ */
+app.controller('RegistrationController', function ($scope, $http, $location, $rootScope, $timeout) {
+    $scope.form = {
+        username: '',
+        email: '',
+        password: '',
+        voucher: '',
+        useVoucher: true
+    };
+    $scope.processing = false;
+    $scope.usernameState = null; // available | taken | unknown
+    $scope.emailState = null;    // available | taken | unknown
+    $scope.dialog = null;        // { key, type, text }
+    $scope.activationPending = false;
+    $scope.activationResendBusy = false;
+    $scope.lastRegistration = null; // { user, deviceId, token }
+
+    var DIALOG_TEXT = {
+        REG_VOUCHER_INVALID: 'Voucher is invalid or expired.',
+        REG_VOUCHER_VALID: 'Voucher validated.',
+        REG_ACTIVATION_REQUIRED: 'Activation is required before protected access.',
+        REG_ACTIVATION_EMAIL_SENT: 'Activation email sent. Please check your inbox.',
+        REG_ACTIVATION_RESEND_SUCCESS: 'Activation email resent. Please check your inbox.',
+        REG_ACTIVATION_RESEND_FAILED: 'Activation resend failed. Please try again later.',
+        REG_REGISTRATION_SUCCESS: 'Registration successful. You can now log in.',
+        REG_REGISTRATION_FAILED: 'Registration failed. Please verify data and try again.'
+    };
+
+    function deviceGuid() {
+        var nav = window.navigator;
+        var scr = window.screen;
+        var g = (nav.mimeTypes ? nav.mimeTypes.length : 0);
+        g += nav.userAgent.replace(/\D+/g, '');
+        g += (nav.plugins ? nav.plugins.length : 0);
+        g += scr.height || '';
+        g += scr.width || '';
+        g += scr.pixelDepth || '';
+        return String(g);
+    }
+
+    function clearDialog() {
+        $scope.dialog = null;
+    }
+
+    $scope.clearDialog = clearDialog;
+
+    function setDialog(key, type, textOverride) {
+        $scope.dialog = { key: key, type: type, text: textOverride || DIALOG_TEXT[key] || 'Request failed.' };
+    }
+
+    if ($rootScope.activationRequiredState) {
+        $scope.activationPending = true;
+        setDialog('REG_ACTIVATION_REQUIRED', 'warn');
+    }
+
+    $scope.$on('activation-required', function () {
+        $scope.activationPending = true;
+        setDialog('REG_ACTIVATION_REQUIRED', 'warn');
+    });
+
+    function registrationMessage(path, username, email, passHash, deviceId, voucher) {
+        var base = path + ':user=' + username + '&email=' + email + '&pswrd=' + passHash + '&deviceId=' + deviceId;
+        if (voucher !== null) {
+            base += '&voucher_=' + voucher;
+        }
+        return base;
+    }
+
+    function buildHmacHeaders(path, username, passHash, email, deviceId, voucherValue, body) {
+        var secret = CryptoJS.HmacSHA512(username, passHash);
+        var secretB64 = CryptoJS.enc.Base64.stringify(secret);
+        var microTime = String(new Date().getTime());
+        var msg = registrationMessage(path, username, email, passHash, deviceId, voucherValue);
+        var signingString = msg + ':' + microTime + ':' + body.length;
+        var h = CryptoJS.HmacSHA512(signingString, secretB64);
+        return {
+            hmac: CryptoJS.enc.Base64.stringify(h),
+            microTime: microTime,
+            auth: btoa(username + ':' + passHash)
+        };
+    }
+
+    var USERNAME_MIN_LEN = 2;
+    var USERNAME_DEBOUNCE_MS = 300;
+    var EMAIL_DEBOUNCE_MS = 450;
+    var usernameCheckTimer = null;
+    var emailCheckTimer = null;
+    var usernameReqSeq = 0;
+    var emailReqSeq = 0;
+
+    function cancelUsernameTimer() {
+        if (usernameCheckTimer) {
+            $timeout.cancel(usernameCheckTimer);
+            usernameCheckTimer = null;
+        }
+    }
+
+    function cancelEmailTimer() {
+        if (emailCheckTimer) {
+            $timeout.cancel(emailCheckTimer);
+            emailCheckTimer = null;
+        }
+    }
+
+    function isFullEmail(value) {
+        if (!value) return false;
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+    }
+
+    $scope.isFullEmail = isFullEmail;
+
+    function hasText(value) {
+        return !!(value && String(value).trim());
+    }
+
+    function validForSubmit() {
+        var username = ($scope.form.username || '').trim();
+        var email = ($scope.form.email || '').trim();
+        if (username.length < USERNAME_MIN_LEN) return false;
+        if (!isFullEmail(email)) return false;
+        if (!hasText($scope.form.password)) return false;
+        if ($scope.form.useVoucher && !hasText($scope.form.voucher)) return false;
+        if ($scope.usernameState !== 'available') return false;
+        if ($scope.emailState !== 'available') return false;
+        if ($scope.usernameState === 'checking' || $scope.emailState === 'checking') return false;
+        return true;
+    }
+
+    $scope.canSubmit = validForSubmit;
+
+    $scope.checkUsername = function (immediate) {
+        var raw = ($scope.form.username || '').trim();
+        cancelUsernameTimer();
+
+        if (!raw) {
+            $scope.usernameState = null;
+            return;
+        }
+        if (raw.length < USERNAME_MIN_LEN) {
+            $scope.usernameState = null;
+            return;
+        }
+
+        var run = function () {
+            var reqId = ++usernameReqSeq;
+            clearDialog();
+            $scope.usernameState = 'checking';
+            $http.get(apiUrl(API_BASE.USER, '/newuser/') + encodeURIComponent(raw))
+                .success(function () {
+                    if (reqId !== usernameReqSeq) return;
+                    $scope.usernameState = 'available';
+                })
+                .error(function (data, status) {
+                    if (reqId !== usernameReqSeq) return;
+                    $scope.usernameState = (status === 412) ? 'taken' : 'unknown';
+                });
+        };
+
+        if (immediate) {
+            run();
+            return;
+        }
+        usernameCheckTimer = $timeout(run, USERNAME_DEBOUNCE_MS);
+    };
+
+    $scope.checkEmail = function (immediate) {
+        var raw = ($scope.form.email || '').trim();
+        cancelEmailTimer();
+
+        if (!raw) {
+            $scope.emailState = null;
+            return;
+        }
+        if (!isFullEmail(raw)) {
+            $scope.emailState = null;
+            return;
+        }
+
+        var run = function () {
+            var reqId = ++emailReqSeq;
+            clearDialog();
+            $scope.emailState = 'checking';
+            $http.get(apiUrl(API_BASE.USER, '/newemail/') + encodeURIComponent(raw))
+                .success(function () {
+                    if (reqId !== emailReqSeq) return;
+                    $scope.emailState = 'available';
+                })
+                .error(function (data, status) {
+                    if (reqId !== emailReqSeq) return;
+                    $scope.emailState = (status === 412) ? 'taken' : 'unknown';
+                });
+        };
+
+        if (immediate) {
+            run();
+            return;
+        }
+        emailCheckTimer = $timeout(run, EMAIL_DEBOUNCE_MS);
+    };
+
+    function validateVoucherThenRegister(next) {
+        if (!$scope.form.useVoucher) {
+            next();
+            return;
+        }
+        var voucherBody = 'voucher=' + encodeURIComponent($scope.form.voucher);
+        $http({
+            method: 'POST',
+            url: apiUrl(API_BASE.LOGIN, '/voucher'),
+            data: voucherBody,
+            transformRequest: function (d) { return d; },
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        }).success(function () {
+            setDialog('REG_VOUCHER_VALID', 'success');
+            next();
+        }).error(function () {
+            $scope.processing = false;
+            setDialog('REG_VOUCHER_INVALID', 'error');
+        });
+    }
+
+    $scope.register = function () {
+        clearDialog();
+        if (!validForSubmit()) {
+            setDialog('REG_REGISTRATION_FAILED', 'error', 'Please complete all required fields correctly.');
+            return;
+        }
+
+        $scope.processing = true;
+        var username = $scope.form.username.trim();
+        var email = $scope.form.email.trim();
+        var deviceId = deviceGuid();
+        var passHash = CryptoJS.SHA3($scope.form.password, { outputLength: 512 }).toString();
+
+        validateVoucherThenRegister(function () {
+            var endpoint = $scope.form.useVoucher ? '/register' : '/registerWithoutVoucher';
+            var voucherValue = $scope.form.useVoucher ? $scope.form.voucher.trim() : null;
+            var body = 'user=' + encodeURIComponent(username) +
+                '&email=' + encodeURIComponent(email) +
+                '&pswrd=' + encodeURIComponent(passHash) +
+                '&deviceId=' + encodeURIComponent(deviceId) +
+                ($scope.form.useVoucher ? '&voucher_=' + encodeURIComponent(voucherValue) : '');
+
+            // Server side helper uses /login/register signature format for both modes.
+            var headers = buildHmacHeaders('/login/register', username, passHash, email, deviceId, voucherValue, body);
+
+            $http({
+                method: 'POST',
+                url: apiUrl(API_BASE.LOGIN, endpoint),
+                data: body,
+                transformRequest: function (d) { return d; },
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'authorization': 'Basic ' + headers.auth,
+                    'X-HMAC-HASH': headers.hmac,
+                    'X-MICRO-TIME': headers.microTime,
+                    'X-URL': ''
+                }
+            }).success(function (data, status, respHeaders) {
+                $scope.processing = false;
+                var token = respHeaders('X-Token') || data['X-Token'] || null;
+                if (token) {
+                    localStorage.sessionToken_ = token;
+                }
+                $scope.lastRegistration = { user: username, deviceId: deviceId, token: token };
+
+                if (status === 300 || data.Response === 'S') {
+                    $scope.activationPending = true;
+                    setDialog('REG_ACTIVATION_REQUIRED', 'warn', 'Registration pending activation. Please activate your account by email.');
+                    return;
+                }
+
+                if (data.Success === 'true' || data.success === 1 || data.Session === 'raked') {
+                    setDialog('REG_REGISTRATION_SUCCESS', 'success');
+                    localStorage.setItem('filmReviewUser', username);
+                    $rootScope.isLoggedIn = true;
+                    $rootScope.loggedInUser = username;
+                    setTimeout(function () {
+                        $scope.$apply(function () { $location.path('/movies'); });
+                    }, 500);
+                    return;
+                }
+
+                $scope.activationPending = true;
+                setDialog('REG_ACTIVATION_REQUIRED', 'warn', 'Registration created but activation is required.');
+            }).error(function (data, status) {
+                $scope.processing = false;
+                if (status === 300) {
+                    $scope.activationPending = true;
+                    setDialog('REG_ACTIVATION_REQUIRED', 'warn');
+                    return;
+                }
+                setDialog('REG_REGISTRATION_FAILED', 'error');
+            });
+        });
+    };
+
+    $scope.resendActivation = function () {
+        if (!$scope.lastRegistration || !$scope.lastRegistration.token) {
+            setDialog('REG_ACTIVATION_RESEND_FAILED', 'error', 'Cannot resend activation yet. Please register again.');
+            return;
+        }
+        $scope.activationResendBusy = true;
+        $http({
+            method: 'POST',
+            url: apiUrl(API_BASE.LOGIN, '/activation'),
+            data: {
+                user: $scope.lastRegistration.user,
+                deviceId: $scope.lastRegistration.deviceId
+            },
+            headers: {
+                'Content-Type': 'application/json',
+                'Ciphertext': $scope.lastRegistration.token
+            }
+        }).success(function () {
+            $scope.activationResendBusy = false;
+            setDialog('REG_ACTIVATION_RESEND_SUCCESS', 'success');
+        }).error(function () {
+            $scope.activationResendBusy = false;
+            setDialog('REG_ACTIVATION_RESEND_FAILED', 'error');
+        });
+    };
+});
