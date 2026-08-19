@@ -1,13 +1,13 @@
 package com.dalogin.utils;
 
 import org.apache.commons.codec.binary.Base64;
-import org.apache.log4j.Logger;
+import org.jboss.logging.Logger;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
 public class hmac512 {
-    private static final Logger log = Logger.getLogger(Logger.class.getName());
+    private static final Logger log = Logger.getLogger(hmac512.class);
 
     /**
      * Returns the final hmac string to validate the client request. The method parameters will form a string that will be hashed to match against what was received from the request.

@@ -15,7 +15,7 @@ import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.annotation.WebListener;
-import org.apache.log4j.Logger;
+import org.jboss.logging.Logger;
 
 import javax.sql.DataSource;
 import java.io.BufferedReader;
@@ -32,7 +32,7 @@ public class CustomServletContextListener implements ServletContextListener {
     public static String gmail_username = null;
     public static String gmail_smtp = null;
 
-    private static final Logger log = Logger.getLogger(Logger.class.getName());
+    private static final Logger log = Logger.getLogger(CustomServletContextListener.class);
 
     @Inject
     DataSource dataSource;
@@ -41,6 +41,7 @@ public class CustomServletContextListener implements ServletContextListener {
      *
      */
     public void contextInitialized(ServletContextEvent event) {
+        log.debugf("event=CONTEXT_INIT listenerName=%s", CustomServletContextListener.class.getSimpleName());
         ServletContext context = event.getServletContext();
         try {
             ClassLoader cl = this.getClass().getClassLoader();
@@ -62,11 +63,11 @@ public class CustomServletContextListener implements ServletContextListener {
         DBConnectionManager dbManager;
         if (dataSource != null) {
             dbManager = new DBConnectionManager(dataSource);
-            log.info("Database connection pool initialized (Quarkus Agroal DataSource).");
+            log.debug("Database connection pool initialized (Quarkus Agroal DataSource)");
         } else {
             String dbUrl = System.getenv().getOrDefault("DB_URL", "jdbc:mysql://localhost:3306/login_");
             dbManager = new DBConnectionManager(dbUrl, "sqluser", "sqluserpw");
-            log.info("Database connection initialized (legacy DriverManager).");
+            log.debug("Database connection initialized (legacy DriverManager)");
         }
         context.setAttribute("DBManager", dbManager);
 
@@ -85,26 +86,16 @@ public class CustomServletContextListener implements ServletContextListener {
         context.setAttribute("attributes", attributes);
         Multimap<String, String> sessions = Multimaps.synchronizedSortedSetMultimap(TreeMultimap.create());
         context.setAttribute("sessions", sessions);
-        //PBI: resolve dependencies for WildFly, smoothly
-        //WS SOAP taken out due to dependency conflict on WildFly.
-        //put it here
     }
 
-    /**
-     * Needed for the ServletContextListener interface.
-     */
     public void contextDestroyed(ServletContextEvent event) {
-        // To overcome the problem with losing the session references
-        // during server restarts, put code here to serialize the
-        // activeUsers HashMap.  Then put code in the contextInitialized
-        // method that reads and reloads it if it exists...
         ServletContext context = event.getServletContext();
         DBConnectionManager dbManager = (DBConnectionManager) context.getAttribute("DBManager");
         try {
             dbManager.closeConnection();
         } catch (SQLException e) {
-            log.error(e.getLocalizedMessage());
+            log.error("Failed to close DB connection", e);
         }
-        log.info("Database connection closed for Application.");
+        log.debugf("event=CONTEXT_DESTROY listenerName=%s", CustomServletContextListener.class.getSimpleName());
     }
 }

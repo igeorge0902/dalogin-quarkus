@@ -11,7 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.ws.rs.core.Response;
-import org.apache.log4j.Logger;
+import org.jboss.logging.Logger;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -33,74 +33,90 @@ public class ManagePurchases extends HttpServlet implements Serializable {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        response.setContentType("application/json;charset=UTF-8");
-
-        HttpSession session = request.getSession();
-        ServletContext context = request.getServletContext();
-        String webApi2Context = context.getInitParameter("webApi2Context");
-        Map<String, String> attributes = buildAuthAttributes(session, context);
-
-        String serviceUrl = SystemConstants.getServiceUrl() + webApi2Context;
-        ServiceClient client = null;
-        String responseBody;
-
+        String servletName = getServletName();
+        String method = request.getMethod();
+        String uri = request.getRequestURI();
+        log.debugf("HTTP request started: servlet=%s, method=%s, uri=%s", servletName, method, uri);
         try {
-            client = new ServiceClient(serviceUrl, request, attributes);
+            response.setContentType("application/json;charset=UTF-8");
 
-            Response apiResponse;
-            if (request.getParameter("ticketsToBeCancelled") != null) {
-                apiResponse = client.managePurchases(request);
-            } else {
-                apiResponse = client.deletePurchases(request);
+            HttpSession session = request.getSession();
+            ServletContext context = request.getServletContext();
+            String webApi2Context = context.getInitParameter("webApi2Context");
+            Map<String, String> attributes = buildAuthAttributes(session, context);
+
+            String serviceUrl = SystemConstants.getServiceUrl() + webApi2Context;
+            ServiceClient client = null;
+            String responseBody;
+
+            try {
+                client = new ServiceClient(serviceUrl, request, attributes);
+
+                Response apiResponse;
+                if (request.getParameter("ticketsToBeCancelled") != null) {
+                    apiResponse = client.managePurchases(request);
+                } else {
+                    apiResponse = client.deletePurchases(request);
+                }
+                responseBody = apiResponse.readEntity(String.class);
+            } catch (CertificateException | KeyStoreException |
+                     NoSuchAlgorithmException | KeyManagementException e) {
+                log.error("SSL configuration error", e);
+                throw new ServletException("SSL configuration error", e);
+            } finally {
+                if (client != null) {
+                    client.close();
+                }
             }
-            responseBody = apiResponse.readEntity(String.class);
-        } catch (CertificateException | KeyStoreException |
-                 NoSuchAlgorithmException | KeyManagementException e) {
-            log.error("SSL configuration error", e);
-            throw new ServletException("SSL configuration error", e);
+
+            try (PrintWriter out = response.getWriter()) {
+                out.print(responseBody);
+            }
         } finally {
-            if (client != null) {
-                client.close();
-            }
-        }
-
-        try (PrintWriter out = response.getWriter()) {
-            out.print(responseBody);
+            log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
         }
     }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        response.setContentType("application/json;charset=UTF-8");
-
-        HttpSession session = request.getSession();
-        ServletContext context = request.getServletContext();
-        String webApi2Context = context.getInitParameter("webApi2Context");
-        Map<String, String> attributes = buildAuthAttributes(session, context);
-
-        String serviceUrl = SystemConstants.getServiceUrl() + webApi2Context;
-        ServiceClient client = null;
-        String responseBody;
-
+        String servletName = getServletName();
+        String method = request.getMethod();
+        String uri = request.getRequestURI();
+        log.debugf("HTTP request started: servlet=%s, method=%s, uri=%s", servletName, method, uri);
         try {
-            client = new ServiceClient(serviceUrl, request, attributes);
+            response.setContentType("application/json;charset=UTF-8");
 
-            String purchaseId = request.getParameter("purchaseId");
-            Response apiResponse = client.callGetTickets(purchaseId);
-            responseBody = apiResponse.readEntity(String.class);
-        } catch (CertificateException | KeyStoreException |
-                 NoSuchAlgorithmException | KeyManagementException e) {
-            log.error("SSL configuration error", e);
-            throw new ServletException("SSL configuration error", e);
-        } finally {
-            if (client != null) {
-                client.close();
+            HttpSession session = request.getSession();
+            ServletContext context = request.getServletContext();
+            String webApi2Context = context.getInitParameter("webApi2Context");
+            Map<String, String> attributes = buildAuthAttributes(session, context);
+
+            String serviceUrl = SystemConstants.getServiceUrl() + webApi2Context;
+            ServiceClient client = null;
+            String responseBody;
+
+            try {
+                client = new ServiceClient(serviceUrl, request, attributes);
+
+                String purchaseId = request.getParameter("purchaseId");
+                Response apiResponse = client.callGetTickets(purchaseId);
+                responseBody = apiResponse.readEntity(String.class);
+            } catch (CertificateException | KeyStoreException |
+                     NoSuchAlgorithmException | KeyManagementException e) {
+                log.error("SSL configuration error", e);
+                throw new ServletException("SSL configuration error", e);
+            } finally {
+                if (client != null) {
+                    client.close();
+                }
             }
-        }
 
-        try (PrintWriter out = response.getWriter()) {
-            out.print(responseBody);
+            try (PrintWriter out = response.getWriter()) {
+                out.print(responseBody);
+            }
+        } finally {
+            log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
         }
     }
 

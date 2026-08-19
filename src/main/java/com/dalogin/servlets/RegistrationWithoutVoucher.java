@@ -14,7 +14,7 @@ import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
-import org.apache.log4j.Logger;
+import org.jboss.logging.Logger;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -38,6 +38,11 @@ public class RegistrationWithoutVoucher extends HttpServlet implements Serializa
     }
 
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String servletName = getServletName();
+        String method = request.getMethod();
+        String uri = request.getRequestURI();
+        log.debugf("HTTP request started: servlet=%s, method=%s, uri=%s", servletName, method, uri);
+        try {
         // Set response content type
         response.setContentType("application/json");
         response.setCharacterEncoding("utf-8");
@@ -184,21 +189,32 @@ public class RegistrationWithoutVoucher extends HttpServlet implements Serializa
             out.print(json);
             out.flush();
         }
+        } finally {
+            log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
+        }
     }
 
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        // Set response content type
-        response.setContentType("text/html");
+        String servletName = getServletName();
+        String method = request.getMethod();
+        String uri = request.getRequestURI();
+        log.debugf("HTTP request started: servlet=%s, method=%s, uri=%s", servletName, method, uri);
         try {
-            String pass = request.getParameter("pswrd");
-            String voucher = request.getParameter("voucher_");
-            String deviceId = request.getParameter("deviceId");
-            String user = request.getParameter("user");
-            if (voucher.trim().isEmpty() || (user != null && user.trim().isEmpty()) || pass.trim().isEmpty() || deviceId.trim().isEmpty()) {
-                response.sendError(HttpServletResponse.SC_BAD_GATEWAY, "Line 162");
+            // Set response content type
+            response.setContentType("text/html");
+            try {
+                String pass = request.getParameter("pswrd");
+                String voucher = request.getParameter("voucher_");
+                String deviceId = request.getParameter("deviceId");
+                String user = request.getParameter("user");
+                if (voucher.trim().isEmpty() || (user != null && user.trim().isEmpty()) || pass.trim().isEmpty() || deviceId.trim().isEmpty()) {
+                    response.sendError(HttpServletResponse.SC_BAD_GATEWAY, "Line 162");
+                }
+            } catch (Exception e) {
+                response.sendError(HttpServletResponse.SC_BAD_GATEWAY, "Line 166");
             }
-        } catch (Exception e) {
-            response.sendError(HttpServletResponse.SC_BAD_GATEWAY, "Line 166");
+        } finally {
+            log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
         }
     }
 

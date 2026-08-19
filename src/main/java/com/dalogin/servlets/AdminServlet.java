@@ -8,7 +8,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import jakarta.ws.rs.core.Response;
-import org.apache.log4j.Logger;
+import org.jboss.logging.Logger;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -42,16 +42,24 @@ public class AdminServlet extends HttpServlet {
     }
 
     private void processRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String servletName = getServletName();
+        String method = request.getMethod();
+        String uri = request.getRequestURI();
+        log.debugf("HTTP request started: servlet=%s, method=%s, uri=%s", servletName, method, uri);
+        try {
         response.setContentType("text/html;charset=UTF-8");
         HttpSession session = request.getSession(false);
         String sessionId = Optional.ofNullable(request.getParameter("JSESSIONID")).orElseGet(() -> session != null ? session.getId() : null);
-        log.info("SessionId from the request parameter: " + sessionId);
+        log.debug("Session identifier resolved for admin flow");
 
         try {
             performTask(request, response, session);
         } catch (Exception e) {
             log.error("Error during task execution", e);
             sendErrorResponse(response, 502, "Internal server error");
+        }
+        } finally {
+            log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
         }
     }
 

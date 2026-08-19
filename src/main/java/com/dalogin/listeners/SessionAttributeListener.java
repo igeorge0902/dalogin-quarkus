@@ -18,20 +18,15 @@ public class SessionAttributeListener implements HttpSessionAttributeListener {
 
     /** Creates new SessionAttribListen */
     public SessionAttributeListener() {
-        log.info(getClass().getName());
+        log.debugf("event=LISTENER_INIT listenerName=%s", getClass().getSimpleName());
     }
 
     public void attributeAdded(HttpSessionBindingEvent se) {
         HttpSession session = se.getSession();
         String id = session.getId();
         String name = se.getName();
-        String value = String.valueOf(se.getValue());
-        String source = se.getSource().getClass().getName();
-        String message = new StringBuilder("Attribute bound to session in ")
-                .append(source).append("\nThe attribute name: ").append(name)
-                .append("\n").append("The attribute value:").append(value)
-                .append("\n").append("The session ID: ").append(id).toString();
-        log.info(message);
+        log.debugf("event=SESSION_ATTR_ADDED listenerName=%s sessionId=%s attributeName=%s attributeValue=%s",
+                getClass().getSimpleName(), id, name, maskIfToken(name, se.getValue()));
     }
 
     public void attributeRemoved(HttpSessionBindingEvent se) {
@@ -40,19 +35,23 @@ public class SessionAttributeListener implements HttpSessionAttributeListener {
         String name = se.getName();
         if (name == null)
             name = "Unknown";
-        String value = String.valueOf(se.getValue());
-        String source = se.getSource().getClass().getName();
-        String message = new StringBuilder("Attribute unbound from session in ")
-                .append(source).append("\nThe attribute name: ").append(name)
-                .append("\n").append("The attribute value: ").append(value)
-                .append("\n").append("The session ID: ").append(id).toString();
-        log.info(message);
+        log.debugf("event=SESSION_ATTR_REMOVED listenerName=%s sessionId=%s attributeName=%s",
+                getClass().getSimpleName(), id, name);
     }
 
     public void attributeReplaced(HttpSessionBindingEvent se) {
-        String source = se.getSource().getClass().getName();
-        String message = new StringBuilder("Attribute replaced in session  ")
-                .append(source).toString();
-        log.info(message);
+        log.debugf("event=SESSION_ATTR_REPLACED listenerName=%s source=%s",
+                getClass().getSimpleName(), se.getSource().getClass().getName());
+    }
+
+    private String maskIfToken(String attributeName, Object value) {
+        if (value == null) {
+            return "null";
+        }
+        String lower = attributeName == null ? "" : attributeName.toLowerCase();
+        if (lower.contains("token") || lower.contains("ciphertext") || lower.contains("nonce") || lower.contains("xsrf")) {
+            return "***";
+        }
+        return value.toString();
     }
 }

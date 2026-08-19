@@ -1,6 +1,6 @@
 package com.dalogin.utils;
 
-import org.apache.log4j.Logger;
+import org.jboss.logging.Logger;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -16,7 +16,7 @@ public class PropertyUtils {
     /**
      *
      */
-    private static Logger log = Logger.getLogger(Logger.class.getName());
+    private static final Logger log = Logger.getLogger(PropertyUtils.class);
 
     /**
      * Loads the property file on the context from the resource path.

@@ -7,7 +7,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import org.apache.log4j.Logger;
+import org.jboss.logging.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -35,57 +35,65 @@ public class ActiveSessionsServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        String servletName = getServletName();
+        String method = request.getMethod();
+        String uri = request.getRequestURI();
+        log.debugf("HTTP request started: servlet=%s, method=%s, uri=%s", servletName, method, uri);
+        try {
 
-        response.setContentType("application/json");
-        response.setCharacterEncoding("utf-8");
+            response.setContentType("application/json");
+            response.setCharacterEncoding("utf-8");
 
-        ServletContext context = request.getServletContext();
+            ServletContext context = request.getServletContext();
 
-        @SuppressWarnings("unchecked")
-        ConcurrentHashMap<String, HttpSession> activeUsers =
-                (ConcurrentHashMap<String, HttpSession>) context.getAttribute("activeUsers");
+            @SuppressWarnings("unchecked")
+            ConcurrentHashMap<String, HttpSession> activeUsers =
+                    (ConcurrentHashMap<String, HttpSession>) context.getAttribute("activeUsers");
 
-        JSONArray sessionsArray = new JSONArray();
+            JSONArray sessionsArray = new JSONArray();
 
-        if (activeUsers != null) {
-            int index = 0;
-            for (var entry : activeUsers.entrySet()) {
-                String sessionId = entry.getKey();
-                HttpSession session = entry.getValue();
+            if (activeUsers != null) {
+                int index = 0;
+                for (var entry : activeUsers.entrySet()) {
+                    String sessionId = entry.getKey();
+                    HttpSession session = entry.getValue();
 
-                String user = null;
-                String deviceId = null;
-                long creationTime = 0;
+                    String user = null;
+                    String deviceId = null;
+                    long creationTime = 0;
 
-                try {
-                    Object userAttr = session.getAttribute("user");
-                    Object deviceAttr = session.getAttribute("deviceId");
-                    user = userAttr != null ? userAttr.toString() : null;
-                    deviceId = deviceAttr != null ? deviceAttr.toString() : null;
-                    creationTime = session.getCreationTime();
-                } catch (IllegalStateException e) {
-                    // Session was invalidated between iteration and getAttribute — skip it
-                    log.info("Skipping invalidated session: " + sessionId);
-                    continue;
+                    try {
+                        Object userAttr = session.getAttribute("user");
+                        Object deviceAttr = session.getAttribute("deviceId");
+                        user = userAttr != null ? userAttr.toString() : null;
+                        deviceId = deviceAttr != null ? deviceAttr.toString() : null;
+                        creationTime = session.getCreationTime();
+                    } catch (IllegalStateException e) {
+                        // Session was invalidated between iteration and getAttribute — skip it
+                        log.debug("Skipping invalidated session");
+                        continue;
+                    }
+
+                    JSONObject sessionObj = new JSONObject();
+                    sessionObj.put("id", index);
+                    sessionObj.put("sessionId", sessionId);
+                    sessionObj.put("user", user != null ? user : "");
+                    sessionObj.put("deviceId", deviceId != null ? deviceId : "");
+                    sessionObj.put("creationTime", creationTime);
+                    sessionsArray.put(sessionObj);
+                    index++;
                 }
-
-                JSONObject sessionObj = new JSONObject();
-                sessionObj.put("id", index);
-                sessionObj.put("sessionId", sessionId);
-                sessionObj.put("user", user != null ? user : "");
-                sessionObj.put("deviceId", deviceId != null ? deviceId : "");
-                sessionObj.put("creationTime", creationTime);
-                sessionsArray.put(sessionObj);
-                index++;
             }
-        }
 
-        log.info("Active sessions count: " + sessionsArray.length());
+            log.debugf("Active sessions count=%d", sessionsArray.length());
 
-        response.setStatus(HttpServletResponse.SC_OK);
-        try (PrintWriter out = response.getWriter()) {
-            out.print(sessionsArray.toString());
-            out.flush();
+            response.setStatus(HttpServletResponse.SC_OK);
+            try (PrintWriter out = response.getWriter()) {
+                out.print(sessionsArray.toString());
+                out.flush();
+            }
+        } finally {
+            log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
         }
     }
 }

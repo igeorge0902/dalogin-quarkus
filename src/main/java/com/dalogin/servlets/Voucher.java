@@ -12,6 +12,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.jboss.logging.Logger;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -23,11 +24,17 @@ public class Voucher extends HttpServlet {
      *
      */
     private static final long serialVersionUID = 1L;
+    private static final Logger log = Logger.getLogger(Voucher.class);
 
     public void init() throws ServletException {
     }
 
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String servletName = getServletName();
+        String method = request.getMethod();
+        String uri = request.getRequestURI();
+        log.debugf("HTTP request started: servlet=%s, method=%s, uri=%s", servletName, method, uri);
+        try {
         // Set response content type
         response.setContentType("application/json");
         try {
@@ -50,9 +57,17 @@ public class Voucher extends HttpServlet {
         } catch (Exception e) {
             response.sendError(HttpServletResponse.SC_BAD_GATEWAY);
         }
+        } finally {
+            log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
+        }
     }
 
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String servletName = getServletName();
+        String method = request.getMethod();
+        String uri = request.getRequestURI();
+        log.debugf("HTTP request started: servlet=%s, method=%s, uri=%s", servletName, method, uri);
+        try {
         // Set response content type
         response.setContentType("text/html");
         try {
@@ -62,6 +77,9 @@ public class Voucher extends HttpServlet {
             }
         } catch (Exception e) {
             response.sendError(HttpServletResponse.SC_BAD_GATEWAY);
+        }
+        } finally {
+            log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
         }
     }
 

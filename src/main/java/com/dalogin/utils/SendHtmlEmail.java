@@ -6,13 +6,13 @@ import jakarta.mail.Session;
 import jakarta.mail.Transport;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
-import org.apache.log4j.Logger;
+import org.jboss.logging.Logger;
 
 import java.util.Properties;
 
 public class SendHtmlEmail {
 
-    private static final Logger log = Logger.getLogger(Logger.class.getName());
+    private static final Logger log = Logger.getLogger(SendHtmlEmail.class);
 
     /**
      * @param email recipient email

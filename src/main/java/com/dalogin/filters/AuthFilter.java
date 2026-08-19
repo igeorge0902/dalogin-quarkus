@@ -11,7 +11,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import org.apache.log4j.Logger;
+import org.jboss.logging.Logger;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -20,17 +20,20 @@ import java.util.HashMap;
 
 @WebFilter(urlPatterns = {"/admin/*", "/GetAllPurchases", "/CheckOut", "/ManagePurchases", "/logout"})
 public class AuthFilter implements Filter {
-    private static Logger log = Logger.getLogger(Logger.class.getName());
+    private static final Logger log = Logger.getLogger(AuthFilter.class);
     private ServletContext context;
 
     public void init(FilterConfig fConfig) throws ServletException {
         this.context = fConfig.getServletContext();
-        this.context.log("AuthenticationFilter initialized");
+        log.debug("AuthenticationFilter initialized");
     }
 
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse res = (HttpServletResponse) response;
+        String method = req.getMethod();
+        String uri = req.getRequestURI();
+        log.debugf("HTTP request started: filter=%s, method=%s, uri=%s", "AuthFilter", method, uri);
         HttpSession session = req.getSession(false);
         HashMap<String, String> error = new HashMap<>();
         // Set the response message's MIME type
@@ -41,7 +44,7 @@ public class AuthFilter implements Filter {
         if (session != null && sessionId == null) {
             sessionId = session.getId();
         }
-        log.info("SessionId from request parameter in webFilter: " + sessionId);
+        log.debug("Session identifier resolved for authentication flow");
         if (cookies == null || !req.isRequestedSessionIdValid() || session == null) {
             res.setContentType("application/json");
             res.setCharacterEncoding("utf-8");
@@ -57,7 +60,7 @@ public class AuthFilter implements Filter {
             // finally output the json string
             out.print(json.toString());
             out.flush();
-        } else if (session != null && req.isRequestedSessionIdValid() && cookies != null) {
+        } else if (req.isRequestedSessionIdValid()) {
             for (Cookie cookie : cookies) {
                 if (cookie.getName().equalsIgnoreCase("XSRF-TOKEN")) {
                     String actualToken = cookie.getValue().trim();
@@ -80,6 +83,7 @@ public class AuthFilter implements Filter {
                 }
             }
         }
+        log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, res.getStatus());
     }
 
     public void destroy() {

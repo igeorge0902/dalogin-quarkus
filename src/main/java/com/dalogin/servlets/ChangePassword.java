@@ -16,7 +16,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.apache.log4j.Logger;
+import org.jboss.logging.Logger;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -40,6 +40,11 @@ public class ChangePassword extends HttpServlet implements Serializable {
     }
 
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String servletName = getServletName();
+        String method = request.getMethod();
+        String uri = request.getRequestURI();
+        log.debugf("HTTP request started: servlet=%s, method=%s, uri=%s", servletName, method, uri);
+        try {
         // Set response content type
         response.setContentType("application/json");
         response.setCharacterEncoding("utf-8");
@@ -83,13 +88,12 @@ public class ChangePassword extends HttpServlet implements Serializable {
                 return;
             }
             String hmacHash = hmac512.getEmail_ForgetPSW_Hmac512(email, deviceId, time, contentLength);
-            log.info("HandShake was given: " + hmac + " & " + hmacHash);
+            log.debug("Handshake validation executed for forgot password flow");
             try {
-                log.info("deviceId to be decrypted: " + deviceId_);
                 deviceId = aesUtil.decrypt(SALT, IV, PASSPHRASE, deviceId_);
-                log.info("deviceId decrypted: " + deviceId);
+                log.debug("Encrypted device identifier was processed");
             } catch (Exception e) {
-                log.info("There was no deviceId to be decrypted.");
+                log.debug("No encrypted device identifier provided for decryption");
             }
 
             if (hmac.equals(hmacHash) && ((T + T2) > System.currentTimeMillis())) {
@@ -106,6 +110,9 @@ public class ChangePassword extends HttpServlet implements Serializable {
             }
         } catch (Exception e) {
             throw new ServletException(e.getCause().toString());
+        }
+        } finally {
+            log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
         }
     }
 
@@ -145,9 +152,17 @@ public class ChangePassword extends HttpServlet implements Serializable {
     }
 
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String servletName = getServletName();
+        String method = request.getMethod();
+        String uri = request.getRequestURI();
+        log.debugf("HTTP request started: servlet=%s, method=%s, uri=%s", servletName, method, uri);
         // Set response content type
-        response.setContentType("text/html");
-        response.sendError(HttpServletResponse.SC_BAD_GATEWAY);
+        try {
+            response.setContentType("text/html");
+            response.sendError(HttpServletResponse.SC_BAD_GATEWAY);
+        } finally {
+            log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
+        }
     }
 
     public void destroy() {

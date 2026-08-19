@@ -1,6 +1,6 @@
 package com.dalogin.utils;
 
-import org.apache.log4j.Logger;
+import org.jboss.logging.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class jsonParser {
-    private static final Logger log = Logger.getLogger(Logger.class.getName());
+    private static final Logger log = Logger.getLogger(jsonParser.class);
 
     public static void main(String[] args) throws Exception {
         String dbDriverClass = PropertyUtils.getProperty("dbDriverClass");

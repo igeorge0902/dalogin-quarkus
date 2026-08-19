@@ -14,6 +14,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import org.jboss.logging.Logger;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -26,6 +27,7 @@ public class LoggingOut extends HttpServlet {
      *
      */
     private static final long serialVersionUID = -9006384818191092461L;
+    private static final Logger log = Logger.getLogger(LoggingOut.class);
 
     /**
      *
@@ -47,47 +49,64 @@ public class LoggingOut extends HttpServlet {
      *
      */
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String servletName = getServletName();
+        String method = request.getMethod();
+        String uri = request.getRequestURI();
+        log.debugf("HTTP request started: servlet=%s, method=%s, uri=%s", servletName, method, uri);
+        try {
+            doGet(request, response);
+        } finally {
+            log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
+        }
     }
 
     /**
      *
      */
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            ServletContext context = request.getServletContext();
-            session.removeAttribute("user");
-            //TODO: on TomCat, it is called on TomCat shutdown, triggering new tokens.
-            //TODO: automatic logging out handling in the dB (device_states)
-            try {
-                SQLAccess.logout(session.getId(), context);
-            } catch (Exception e) {
-                throw new ServletException(e.getMessage());
+        String servletName = getServletName();
+        String method = request.getMethod();
+        String uri = request.getRequestURI();
+        log.debugf("HTTP request started: servlet=%s, method=%s, uri=%s", servletName, method, uri);
+        try {
+            HttpSession session = request.getSession(false);
+            if (session != null) {
+                ServletContext context = request.getServletContext();
+                session.removeAttribute("user");
+                //TODO: triggering new tokens.
+                //TODO: automatic logging out handling in the dB (device_states)
+                try {
+                    SQLAccess.logout(session.getId(), context);
+                } catch (Exception e) {
+                    throw new ServletException(e.getMessage());
+                }
+                session.invalidate();
+                response.setContentType("application/json");
+                response.setStatus(HttpServletResponse.SC_OK);
+                PrintWriter out = response.getWriter();
+                //create Json Object
+                JSONObject json = new JSONObject();
+                // put some value pairs into the JSON object .
+                json.put("isLoggedOut", "true");
+                json.put("Success", "true");
+                // finally output the json string
+                out.print(json.toString());
+                out.flush();
+            } else {
+                response.setContentType("application/json");
+                response.setStatus(HttpServletResponse.SC_OK);
+                PrintWriter out = response.getWriter();
+                //create Json Object
+                JSONObject json = new JSONObject();
+                // put some value pairs into the JSON object .
+                json.put("isAlreadyLoggedOut", "true");
+                json.put("Success", "true");
+                // finally output the json string
+                out.print(json.toString());
+                out.flush();
             }
-            session.invalidate();
-            response.setContentType("application/json");
-            response.setStatus(HttpServletResponse.SC_OK);
-            PrintWriter out = response.getWriter();
-            //create Json Object
-            JSONObject json = new JSONObject();
-            // put some value pairs into the JSON object .
-            json.put("isLoggedOut", "true");
-            json.put("Success", "true");
-            // finally output the json string
-            out.print(json.toString());
-            out.flush();
-        } else {
-            response.setContentType("application/json");
-            response.setStatus(HttpServletResponse.SC_OK);
-            PrintWriter out = response.getWriter();
-            //create Json Object
-            JSONObject json = new JSONObject();
-            // put some value pairs into the JSON object .
-            json.put("isAlreadyLoggedOut", "true");
-            json.put("Success", "true");
-            // finally output the json string
-            out.print(json.toString());
-            out.flush();
+        } finally {
+            log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
         }
     }
 

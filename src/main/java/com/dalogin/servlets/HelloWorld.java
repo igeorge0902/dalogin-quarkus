@@ -12,7 +12,7 @@ import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
-import org.apache.log4j.Logger;
+import org.jboss.logging.Logger;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -47,6 +47,11 @@ public class HelloWorld extends HttpServlet implements Serializable {
     @Override
     public void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        String servletName = getServletName();
+        String method = request.getMethod();
+        String uri = request.getRequestURI();
+        log.debugf("HTTP request started: servlet=%s, method=%s, uri=%s", servletName, method, uri);
+        try {
 
         response.setContentType("application/json");
         response.setCharacterEncoding("utf-8");
@@ -92,14 +97,13 @@ public class HelloWorld extends HttpServlet implements Serializable {
         long T = Long.parseLong(time.trim());
 
         String hmacHash = hmac512.getLoginHmac512(user, pass, deviceId, time, contentLength);
-        log.info("Handshake received: " + hmac + " vs expected: " + hmacHash);
+        log.debug("Handshake validation executed for login flow");
 
         try {
-            log.info("deviceId to be decrypted: " + deviceId_);
             deviceId = aesUtil.decrypt(SALT, IV, PASSPHRASE, deviceId_);
-            log.info("deviceId decrypted: " + deviceId);
+            log.debug("Encrypted device identifier was processed");
         } catch (Exception e) {
-            log.info("No deviceId decryption performed.");
+            log.debug("No encrypted device identifier provided for decryption");
         }
 
         String hash1 = hashPassword(pass, user, context);
@@ -110,6 +114,9 @@ public class HelloWorld extends HttpServlet implements Serializable {
         } else {
             sendAuthFailed(response);
         }
+        } finally {
+            log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
+        }
     }
 
     /**
@@ -118,23 +125,31 @@ public class HelloWorld extends HttpServlet implements Serializable {
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-
-        response.setContentType("text/html");
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            session.invalidate();
-        }
+        String servletName = getServletName();
+        String method = request.getMethod();
+        String uri = request.getRequestURI();
+        log.debugf("HTTP request started: servlet=%s, method=%s, uri=%s", servletName, method, uri);
 
         try {
-            String pass = request.getParameter("pswrd");
-            String user = request.getParameter("user");
-            String deviceId = request.getParameter("deviceId");
+            response.setContentType("text/html");
+            HttpSession session = request.getSession(false);
+            if (session != null) {
+                session.invalidate();
+            }
 
-            if (user.trim().isEmpty() || pass.trim().isEmpty() || deviceId.trim().isEmpty()) {
+            try {
+                String pass = request.getParameter("pswrd");
+                String user = request.getParameter("user");
+                String deviceId = request.getParameter("deviceId");
+
+                if (user.trim().isEmpty() || pass.trim().isEmpty() || deviceId.trim().isEmpty()) {
+                    response.sendError(HttpServletResponse.SC_BAD_GATEWAY);
+                }
+            } catch (Exception e) {
                 response.sendError(HttpServletResponse.SC_BAD_GATEWAY);
             }
-        } catch (Exception e) {
-            response.sendError(HttpServletResponse.SC_BAD_GATEWAY);
+        } finally {
+            log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
         }
     }
 

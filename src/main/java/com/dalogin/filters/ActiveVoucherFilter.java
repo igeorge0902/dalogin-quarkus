@@ -12,7 +12,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import org.apache.log4j.Logger;
+import org.jboss.logging.Logger;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -22,17 +22,21 @@ import java.util.List;
 
 @WebFilter(servletNames = {"GetAllPurchases", "CheckOut", "ManagePurchases"})
 public class ActiveVoucherFilter implements Filter {
-    private static final Logger log = Logger.getLogger(Logger.class.getName());
+    private static final Logger log = Logger.getLogger(ActiveVoucherFilter.class);
     private ServletContext context;
 
     public void init(FilterConfig fConfig) throws ServletException {
         this.context = fConfig.getServletContext();
-        this.context.log("AuthenticationFilter initialized");
+        log.debug("ActiveVoucherFilter initialized");
     }
 
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse res = (HttpServletResponse) response;
+        String method = req.getMethod();
+        String uri = req.getRequestURI();
+        log.debugf("HTTP request started: filter=%s, method=%s, uri=%s", "ActiveVoucherFilter", method, uri);
+        try {
         HttpSession session = req.getSession(false);
         HashMap<String, String> error = new HashMap<>();
         // Set the response message's MIME type
@@ -43,7 +47,7 @@ public class ActiveVoucherFilter implements Filter {
         if (session != null && sessionId == null) {
             sessionId = session.getId();
         }
-        log.info("SessionId from request parameter: " + sessionId);
+        log.debug("Session identifier resolved for active voucher flow");
         if (cookies == null || !req.isRequestedSessionIdValid() || session == null) {
             res.setContentType("application/json");
             res.setCharacterEncoding("utf-8");
@@ -89,7 +93,7 @@ public class ActiveVoucherFilter implements Filter {
                     res.setContentType("application/json");
                     res.setCharacterEncoding("utf-8");
                     res.setStatus(502);
-                    log.info(e.getMessage());
+                    log.error("Error retrieving token2", e);
                     return;
                 }
                 res.setContentType("application/json");
@@ -113,6 +117,9 @@ public class ActiveVoucherFilter implements Filter {
                 // pass the request along the filter chain
                 chain.doFilter(request, response);
             }
+        }
+        } finally {
+            log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, res.getStatus());
         }
     }
 

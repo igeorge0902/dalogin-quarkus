@@ -8,7 +8,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import jakarta.ws.rs.core.Response;
-import org.apache.log4j.Logger;
+import org.jboss.logging.Logger;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -30,69 +30,85 @@ public class CheckOut extends HttpServlet implements Serializable {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        String servletName = getServletName();
+        String method = request.getMethod();
+        String uri = request.getRequestURI();
+        log.debugf("HTTP request started: servlet=%s, method=%s, uri=%s", servletName, method, uri);
         // GET -> retrieve a client token for the UI to use during checkout
-        response.setContentType("application/json;charset=UTF-8");
-        HttpSession session = request.getSession();
-        ServletContext context = request.getServletContext();
-        String webApi2Context = context.getInitParameter("webApi2Context");
-        Map<String, String> attributes = buildAuthAttributes(session, context);
-
-        String serviceUrl = SystemConstants.getServiceUrl() + webApi2Context;
-
-        ServiceClient client = null;
-        String responseBody = "{}";
         try {
-            client = new ServiceClient(serviceUrl, request, attributes);
-            // IMPORTANT: this returns the client token (e.g. for the UI to initialize a payment widget)
-            Response apiResponse = client.clientToken();
-            responseBody = apiResponse.readEntity(String.class);
-        } catch (CertificateException | KeyStoreException |
-                 NoSuchAlgorithmException | KeyManagementException e) {
-            log.error("SSL configuration error", e);
-            throw new ServletException("SSL configuration error", e);
-        } finally {
-            if (client != null) {
-                client.close();
-            }
-        }
+            response.setContentType("application/json;charset=UTF-8");
+            HttpSession session = request.getSession();
+            ServletContext context = request.getServletContext();
+            String webApi2Context = context.getInitParameter("webApi2Context");
+            Map<String, String> attributes = buildAuthAttributes(session, context);
 
-        try (PrintWriter out = response.getWriter()) {
-            out.print(responseBody);
+            String serviceUrl = SystemConstants.getServiceUrl() + webApi2Context;
+
+            ServiceClient client = null;
+            String responseBody = "{}";
+            try {
+                client = new ServiceClient(serviceUrl, request, attributes);
+                // IMPORTANT: this returns the client token (e.g. for the UI to initialize a payment widget)
+                Response apiResponse = client.clientToken();
+                responseBody = apiResponse.readEntity(String.class);
+            } catch (CertificateException | KeyStoreException |
+                     NoSuchAlgorithmException | KeyManagementException e) {
+                log.error("SSL configuration error", e);
+                throw new ServletException("SSL configuration error", e);
+            } finally {
+                if (client != null) {
+                    client.close();
+                }
+            }
+
+            try (PrintWriter out = response.getWriter()) {
+                out.print(responseBody);
+            }
+        } finally {
+            log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
         }
     }
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        String servletName = getServletName();
+        String method = request.getMethod();
+        String uri = request.getRequestURI();
+        log.debugf("HTTP request started: servlet=%s, method=%s, uri=%s", servletName, method, uri);
         // POST -> perform the checkout. The UI is expected to set the payment token/nonce on the request.
         // (e.g. request parameter "paymentToken" or a form field — ServiceClient.checkOut reads the request)
-        response.setContentType("application/json;charset=UTF-8");
-        HttpSession session = request.getSession();
-        ServletContext context = request.getServletContext();
-        String webApi2Context = context.getInitParameter("webApi2Context");
-        Map<String, String> attributes = buildAuthAttributes(session, context);
-
-        String serviceUrl = SystemConstants.getServiceUrl() + webApi2Context;
-
-        ServiceClient client = null;
-        String responseBody = "{}";
         try {
-            client = new ServiceClient(serviceUrl, request, attributes);
-            // ServiceClient.checkOut should extract the payment token set by the UI from the request
-            Response apiResponse = client.checkOut(request);
-            responseBody = apiResponse.readEntity(String.class);
-        } catch (CertificateException | KeyStoreException |
-                 NoSuchAlgorithmException | KeyManagementException e) {
-            log.error("SSL configuration error", e);
-            throw new ServletException("SSL configuration error", e);
-        } finally {
-            if (client != null) {
-                client.close();
-            }
-        }
+            response.setContentType("application/json;charset=UTF-8");
+            HttpSession session = request.getSession();
+            ServletContext context = request.getServletContext();
+            String webApi2Context = context.getInitParameter("webApi2Context");
+            Map<String, String> attributes = buildAuthAttributes(session, context);
 
-        try (PrintWriter out = response.getWriter()) {
-            out.print(responseBody);
+            String serviceUrl = SystemConstants.getServiceUrl() + webApi2Context;
+
+            ServiceClient client = null;
+            String responseBody = "{}";
+            try {
+                client = new ServiceClient(serviceUrl, request, attributes);
+                // ServiceClient.checkOut should extract the payment token set by the UI from the request
+                Response apiResponse = client.checkOut(request);
+                responseBody = apiResponse.readEntity(String.class);
+            } catch (CertificateException | KeyStoreException |
+                     NoSuchAlgorithmException | KeyManagementException e) {
+                log.error("SSL configuration error", e);
+                throw new ServletException("SSL configuration error", e);
+            } finally {
+                if (client != null) {
+                    client.close();
+                }
+            }
+
+            try (PrintWriter out = response.getWriter()) {
+                out.print(responseBody);
+            }
+        } finally {
+            log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
         }
     }
 

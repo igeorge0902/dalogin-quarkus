@@ -5,7 +5,7 @@ package com.dalogin;
  * @Year: 2015
  */
 
-import org.apache.log4j.Logger;
+import org.jboss.logging.Logger;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -22,7 +22,7 @@ import java.sql.SQLException;
  */
 public class DBConnectionManager {
 
-    private static final Logger log = Logger.getLogger(Logger.class.getName());
+    private static final Logger log = Logger.getLogger(DBConnectionManager.class);
 
     private DataSource dataSource;
 
