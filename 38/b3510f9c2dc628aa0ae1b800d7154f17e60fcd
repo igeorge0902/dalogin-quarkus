@@ -1,0 +1,51 @@
+src/main/java/com/dalogin/listeners/CustomHttpSessionListener.java
+  s_167d994f1edf73::t_ac274616f467dd 58-59,70-71,85-87,97-98,167-168,233-242
+  s_167d994f1edf73::t_8e0fdf3f833c07 181-182
+  s_167d994f1edf73::t_dfdd0d4c9fa5fd 143-144
+  s_167d994f1edf73::t_64c946abcfbe5d 226-227
+src/main/java/com/dalogin/servlets/Voucher.java
+  s_167d994f1edf73::t_e3ae579baf0eb2 15,27,33-37,60-62,66-70,81-82
+src/main/java/com/dalogin/filters/ChangePswFilter.java
+  s_167d994f1edf73::t_409894078c34d3 38-68,72-73
+src/main/java/com/dalogin/client/ServiceClient.java
+  s_167d994f1edf73::t_6f4cf4d1fecbed 4-5,11,26,30-31,44-45,68-69,72,77-78,81,86,89,94-95,98,103-106,109,114-115,118,123,126,131-135,138,145-177
+src/main/java/com/dalogin/servlets/RegistrationWithoutVoucher.java
+  s_167d994f1edf73::t_99da0f366c3068 17,41-45,192-194,198-201,203-214,216-217
+src/main/java/com/dalogin/filters/AuthFilter.java
+  s_167d994f1edf73::t_613f1e4962570a 47,63,86
+src/main/java/com/dalogin/utils/SendHtmlEmail.java
+  s_167d994f1edf73::t_b93f73ba32128f 9,15
+src/main/resources/application.properties
+  h_d154d11af00b83 12-16
+src/main/java/com/dalogin/listeners/SessionAttributeListener.java
+  s_167d994f1edf73::t_9379e20102b104 28-29,38-39,43-55
+src/main/java/com/dalogin/filters/CORSFilter.java
+  s_167d994f1edf73::t_e090f7794d5e03 33-44
+src/main/java/com/dalogin/utils/PropertyUtils.java
+  s_167d994f1edf73::t_2abbebe6fc7798 3,19
+src/main/java/com/dalogin/servlets/LoggingOut.java
+  h_d154d11af00b83 76
+src/main/java/com/dalogin/servlets/GetAllPurchases.java
+  s_167d994f1edf73::t_c78bc855caba7b 11,33-37,39,41,43,45-47,49-57,59-62,64-67,69-71,73-84,87-91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.11",
+  "base_commit_sha": "38b3510f9c2dc628aa0ae1b800d7154f17e60fcd",
+  "prompts": {},
+  "humans": {
+    "h_d154d11af00b83": {
+      "author": "GASPAR, GYORGY <gyorgy.gaspar@lhsystems.com>"
+    }
+  },
+  "sessions": {
+    "s_167d994f1edf73": {
+      "agent_id": {
+        "tool": "github-copilot-jetbrains",
+        "id": "1787062152792",
+        "model": "unknown"
+      },
+      "human_author": "GASPAR, GYORGY <gyorgy.gaspar@lhsystems.com>"
+    }
+  }
+}
