@@ -1,0 +1,25 @@
+src/main/resources/application.properties
+  h_d154d11af00b83 10
+  s_bffba4f7f332af::t_7b14dfe64cc919 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.11",
+  "base_commit_sha": "d675c8c718fb98d247ad6dcc3916219f5f6c683f",
+  "prompts": {},
+  "humans": {
+    "h_d154d11af00b83": {
+      "author": "GASPAR, GYORGY <gyorgy.gaspar@lhsystems.com>"
+    }
+  },
+  "sessions": {
+    "s_bffba4f7f332af": {
+      "agent_id": {
+        "tool": "github-copilot-jetbrains",
+        "id": "1787298125452",
+        "model": "unknown"
+      },
+      "human_author": "GASPAR, GYORGY <gyorgy.gaspar@lhsystems.com>"
+    }
+  }
+}
