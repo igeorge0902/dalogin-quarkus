@@ -10,7 +10,7 @@ Authentication and session gateway for the Cinemas booking platform. Migrated fr
 - **Registration** — Voucher-based (`/Registration`) and open (`/RegistrationWithoutVoucher`) user sign-up with email activation flow.
 - **Password reset** — Forgot-password email flow (`/ChangePassword` → `/ChangePasswordCode` → `/ChangePasswordNewPassword`).
 - **Proxy to mbooks** — `CheckOut`, `GetAllPurchases`, `ManagePurchases` forward requests to the booking service, injecting session-derived headers.
-- **Static UI** — AngularJS 1.x login/register/movies pages served from `src/main/resources/META-INF/resources/`.
+- **Static UI** — AngularJS 1.x login/register/movies pages served from `src/main/resources/META-INF/resources/film-review/`.
 
 ## Web UI flow (film-review)
 

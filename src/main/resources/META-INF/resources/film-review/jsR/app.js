@@ -390,7 +390,7 @@ hmacApp.controller('ForgetPSWController', function ($scope, $http, base64, $loca
 
             if (data.Success === 'true') {
                 //
-                window.location.href = '/login/index.html';
+                window.location.href = '/login/film-review/#/login';
 
             } else {
                 // 
