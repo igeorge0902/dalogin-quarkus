@@ -1,0 +1,90 @@
+README.md
+  s_4f070cf415fa68::t_8f562a109be346 69-70
+  s_4f070cf415fa68::t_e78bae2aaf67f1 55-57
+.env.local
+  s_4f070cf415fa68::t_07eadd1a32f172 1-3
+src/main/java/com/dalogin/servlets/LoggingOut.java
+  s_4f070cf415fa68::t_fec262defca910 5,8,10,27-28,53,58-59,61
+  h_d154d11af00b83 9
+src/main/java/com/dalogin/servlets/ChangePasswordNewPassword.java
+  h_d154d11af00b83 11-12
+  s_4f070cf415fa68::t_7d0bff3b182696 91
+  s_4f070cf415fa68::t_35944325568169 8-10,15,37-38,40-44,58-60,63,66-67,70-73,76,80,83-84,86,93,95,97,99,106-116
+src/main/java/com/dalogin/servlets/ActiveSessionsServlet.java
+  s_4f070cf415fa68::t_0e625f308ec730 86
+  s_4f070cf415fa68::t_97b823d741490b 3
+src/main/java/com/dalogin/servlets/ChangePasswordCode.java
+  s_4f070cf415fa68::t_27d22cee54bc71 8-9,14,36-37,39-40,55,58-59,64,72-73,77,80,82,84-85,87,90,97-107
+  h_d154d11af00b83 10-11
+src/main/java/com/dalogin/filters/ActiveVoucherFilter.java
+  s_4f070cf415fa68::t_d762ea585f92a2 8-10,28-33,78,97
+src/main/java/com/dalogin/servlets/AdminServlet.java
+  s_4f070cf415fa68::t_8cc9c29e7991ff 5-6,8,11-14,23-26,33-37,73,81,85-86,89,91,93,97-99,102,105,109,112,115-117,120,127,138-140,147
+  h_d154d11af00b83 7
+  s_4f070cf415fa68::t_4b560a3200b584 60-65
+src/main/java/com/dalogin/servlets/GetAllPurchases.java
+  s_4f070cf415fa68::t_ee5314213ec4d4 71,80-85
+  h_d154d11af00b83 12
+  s_4f070cf415fa68::t_ae1460240e5b9e 2-6,10-11,13,17-20,35-41,47-49,56-57,63,75,86-87
+  s_4f070cf415fa68::t_cadb6b88bd1efd 72-74
+src/main/java/com/dalogin/servlets/ChangePassword.java
+  s_4f070cf415fa68::t_3b486c9d336142 8-9,14,34-35,37-38,52,56-59,61,64,66,68-69,71,74,81-93,95,97,100,102
+  h_d154d11af00b83 10-11
+src/test/java/com/dalogin/servlets/LoginFlowTest.java
+  s_4f070cf415fa68::t_a31ff67c556a06 222,229
+src/main/java/com/dalogin/servlets/RegistrationWithoutVoucher.java
+  s_4f070cf415fa68::t_ac50e87bf9c17c 8-12,19,23-26,40-41,43-47,59-60,63-68,70-71,77-83,85-88,90,93,95-125,129,133,137,142
+  h_d154d11af00b83 13-15
+src/main/java/com/dalogin/listeners/CustomHttpSessionListener.java
+  s_4f070cf415fa68::t_3b722be2cb11e4 8,10,45-47,225
+src/main/java/com/dalogin/servlets/CheckOut.java
+  s_4f070cf415fa68::t_9ef13a58c0a7f3 54,77,87-91
+  s_4f070cf415fa68::t_ce4ce901bacf73 2-6,10-11,13,17-20,35-41,51,58,64,74,81,92-93,95-97,101-102
+  s_4f070cf415fa68::t_6594b8e82a6a28 55-57,78-80
+  h_d154d11af00b83 12
+src/main/java/com/dalogin/servlets/Registration.java
+  h_d154d11af00b83 13-15
+  s_4f070cf415fa68::t_f3df245709acbc 115
+  s_4f070cf415fa68::t_a0c3d67ab78dbf 12,48-49,86,120,130,141
+  s_4f070cf415fa68::t_90fba88e2b9ac6 7-11,18,39-40,42-47,61-62,66-70,73-76,87-88,90,94-95,98-101,104,106-107,110,113,116,121,125,131,134,144,147,154-158,160-162,164,166-169,171-172,174,177,181-184
+src/main/java/com/dalogin/filters/ChangePswFilter.java
+  s_4f070cf415fa68::t_e2ff396be5e10d 3-5,21-26,45,50
+src/main/java/com/dalogin/servlets/RegActivation.java
+  s_4f070cf415fa68::t_6b733e6ba73c7d 8-10,13,39-40,42-46,54-55,71,84,86,88,92,111,132,135,138
+  h_d154d11af00b83 11
+  s_4f070cf415fa68::t_183079278a0ad0 68
+src/main/java/com/dalogin/servlets/HelloWorld.java
+  s_4f070cf415fa68::t_a1bc1ac3222a42 8-12,17,20-23,41-42,44-48,61-62,64-68,70-74,76-77,79-81,83-84,86-89,91,131,133-135,137-138,140,142-150,153,155-161,163-165,167-168,171-173,175-181,184-191
+  h_d154d11af00b83 13-15
+src/main/java/com/dalogin/servlets/Voucher.java
+  s_4f070cf415fa68::t_a99c10962e28cc 8,10,28-29,42-43,45,48,66,69
+  h_d154d11af00b83 9
+src/main/resources/application.properties
+  h_d154d11af00b83 8
+src/main/java/com/dalogin/servlets/ManagePurchases.java
+  h_d154d11af00b83 12
+  s_4f070cf415fa68::t_70e63513249cce 2-6,10-11,13,35-41,47,52,58,64,70,75,82,93-94,96,98-100,102-103
+  s_4f070cf415fa68::t_dd191bceb1b825 55-57,78-81
+  s_4f070cf415fa68::t_00eaa1f50aa59d 54,77,88-92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "961404151922ae495277b149812d9078701a269d",
+  "prompts": {},
+  "humans": {
+    "h_d154d11af00b83": {
+      "author": "GASPAR, GYORGY <gyorgy.gaspar@lhsystems.com>"
+    }
+  },
+  "sessions": {
+    "s_4f070cf415fa68": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "1e357a1c-f397-412d-841e-a4f799814c52",
+        "model": "unknown"
+      },
+      "human_author": "GASPAR, GYORGY <gyorgy.gaspar@lhsystems.com>"
+    }
+  }
+}
