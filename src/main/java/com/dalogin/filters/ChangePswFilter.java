@@ -1,7 +1,8 @@
 package com.dalogin.filters;
 
-import com.dalogin.SQLAccess;
-import com.dalogin.utils.AesUtil;
+import com.dalogin.crypto.CryptoService;
+import com.dalogin.persistence.passwordreset.PasswordResetManager;
+import jakarta.inject.Inject;
 import jakarta.servlet.*;
 import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.http.Cookie;
@@ -14,18 +15,18 @@ import java.util.List;
 
 @WebFilter(servletNames = {"ChangePasswordNewPassword"})
 public class ChangePswFilter implements Filter {
-    private static final int KEYSIZE = 128;
-    private static final int ITERATIONCOUNT = 1000;
     private static final String SALT = "3FF2EC019C627B945225DEBAD71A01B6985FE84C95A70EB132882F88C0A59A55";
     private static final String IV = "F27D5C9927726BCEFE7510B1BDD3D137";
     private static final Logger log = Logger.getLogger(ChangePswFilter.class);
-    private AesUtil aesUtil;
-    private ServletContext context;
+
+    @Inject
+    CryptoService cryptoService;
+
+    @Inject
+    PasswordResetManager passwordResetManager;
 
     public void init(FilterConfig fConfig) throws ServletException {
-        this.context = fConfig.getServletContext();
         log.debug("ChangePswFilter initialized");
-        aesUtil = new AesUtil(KEYSIZE, ITERATIONCOUNT);
     }
 
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
@@ -41,12 +42,12 @@ public class ChangePswFilter implements Filter {
             // retrieve email which requested the password reset
             List<String> cC;
             try {
-                cC = SQLAccess.getForgotPswConfirmationCode(email, context);
+                cC = passwordResetManager.getForgotPswConfirmationCode(email);
             } catch (Exception e) {
                 log.error("Unable to retrieve confirmation code for password reset", e);
                 return;
             }
-            String encrypted_token = aesUtil.encrypt(SALT, IV, cC.get(1), cC.get(0));
+            String encrypted_token = cryptoService.encrypt(SALT, IV, cC.get(1), cC.get(0));
             Cookie[] cookies = req.getCookies();
             if (cookies != null) {
                 for (Cookie cookie : cookies) {

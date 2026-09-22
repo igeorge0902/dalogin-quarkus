@@ -1,47 +1,52 @@
 package com.dalogin.servlets;
-
 /**
  * @author George Gaspar
  * @email: igeorge1982@gmail.com
  * @Year: 2015
  */
-import com.dalogin.SQLAccess;
-import com.dalogin.utils.AesUtil;
+
+import com.dalogin.crypto.CryptoService;
+import com.dalogin.persistence.account.AccountManager;
+import com.dalogin.persistence.devicesession.DeviceSessionManager;
+import com.dalogin.persistence.devicesession.SessionTokens;
+import com.dalogin.persistence.voucher.VoucherManager;
+import com.dalogin.servlets.requestrecord.RegistrationRequest;
+import com.dalogin.servlets.responsemap.RegistrationResponses;
+import com.dalogin.servlets.responsemap.RegistrationSuccess;
 import com.dalogin.utils.EmailValidator;
-import com.dalogin.utils.SendHtmlEmail;
 import com.dalogin.utils.hmac512;
+import jakarta.inject.Inject;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.jboss.logging.Logger;
-import org.json.JSONObject;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.io.Serializable;
-import java.util.List;
 
 @WebServlet(urlPatterns = "/register", name = "Registration")
 public class Registration extends HttpServlet implements Serializable {
     private static final long serialVersionUID = 4570645192274189831L;
     private static final String SALT = "3FF2EC019C627B945225DEBAD71A01B6985FE84C95A70EB132882F88C0A59A55";
     private static final String IV = "F27D5C9927726BCEFE7510B1BDD3D137";
-    private static final int KEYSIZE = 128;
-    private static final int ITERATIONCOUNT = 1000;
     private static final String activationToken = "G";
     private static final Logger log = Logger.getLogger(Logger.class.getName());
 
-    private AesUtil aesUtil;
+    @Inject
+    CryptoService cryptoService;
 
-    @Override
-    public void init() throws ServletException {
-        aesUtil = new AesUtil(KEYSIZE, ITERATIONCOUNT);
-    }
+    @Inject
+    AccountManager accountManager;
+
+    @Inject
+    DeviceSessionManager deviceSessionManager;
+
+    @Inject
+    VoucherManager voucherManager;
 
     @Override
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -53,37 +58,22 @@ public class Registration extends HttpServlet implements Serializable {
         response.setContentType("application/json");
         response.setCharacterEncoding("utf-8");
 
-        String user = request.getParameter("user").trim();
-        String pass = request.getParameter("pswrd").trim();
-        String email = request.getParameter("email").trim();
-        String voucher = request.getParameter("voucher_").trim();
-        String deviceId = request.getParameter("deviceId").trim();
-        String hmac = request.getHeader("X-HMAC-HASH").trim();
-        String contentLength = request.getHeader("Content-Length").trim();
-        String time = request.getHeader("X-MICRO-TIME").trim();
-        String ios = request.getParameter("ios");
-        String WebView = request.getHeader("User-Agent");
-        String M = request.getHeader("M");
-
-        if (M == null) {
-            M = "";
-        }
-
-        long T = Long.parseLong(time.trim());
+        RegistrationRequest reg = RegistrationRequest.from(request);
+        long T = Long.parseLong(reg.microTime());
         ServletContext context = request.getServletContext();
         final long T2 = Long.parseLong(context.getAttribute("time").toString());
 
-        if (voucher != null) {
-            voucher = voucher.trim();
-        }
-        if (email != null) {
-            email = email.trim();
-        }
+        String voucher = reg.voucher();
+        String user = reg.user();
+        String email = reg.email();
+        String pass = reg.password();
+        String deviceId = reg.deviceId();
 
         // TODO: add password policy
-        if (voucher != null && !voucher.equals("") && !user.equals("") && user.trim().length() > 0 && EmailValidator.validate(email)) {
-            String hmacHash = hmac512.getRegHmac512(user, email, pass, deviceId, voucher, time, contentLength);
-            log.info("HandShake was given: " + hmac + " & " + hmacHash);
+        if (voucher != null && !voucher.equals("") && !user.equals("") && user.trim().length() > 0
+                && EmailValidator.validate(email)) {
+            String hmacHash = hmac512.getRegHmac512(user, email, pass, deviceId, voucher, reg.microTime(), reg.contentLength());
+            log.info("HandShake was given: " + reg.hmac() + " & " + hmacHash);
 
             HttpSession session = request.getSession(true);
 
@@ -93,177 +83,103 @@ public class Registration extends HttpServlet implements Serializable {
 
                 // Try - catch is necessary anyways, and will catch user names that have become used in the meantime
                 try {
-                    if (SQLAccess.registerVoucher(voucher, context) && hmac.equals(hmacHash) && ((T + T2) > System.currentTimeMillis())) {
-                        String new_hash = SQLAccess.createUser(pass, user, email, context);
+                    if (voucherManager.registerVoucher(voucher) && reg.hmac().equals(hmacHash)
+                            && ((T + T2) > System.currentTimeMillis())) {
+                        String newHash = accountManager.createUser(pass, user, email);
 
-                        if ("I".equals(new_hash)) {
-                            JSONObject json = new JSONObject();
-                            session.setAttribute("user", user);
-                            session.setAttribute("deviceId", deviceId);
-
+                        if ("I".equals(newHash)) {
                             // setting session to expire in 30 mins
                             session.setMaxInactiveInterval(30 * 60);
 
-                            long SessionCreated = session.getCreationTime();
-                            String sessionID = session.getId();
+                            long sessionCreated = session.getCreationTime();
+                            String sessionId = session.getId();
 
                             // executes updates in chained method, where if any of them fails, the update will not be committed
-                            if (SQLAccess.wrapUpRegistration(voucher, user, pass, deviceId, SessionCreated, sessionID, context)) {
-                                String scheme = request.getScheme();
-                                String serverName = request.getServerName();
-                                String servletContext = context.getContextPath();
-                                List<String> token2 = SQLAccess.getToken2(deviceId, context);
-
-                                String activationData = "user=" + user + "&token2=" + token2;
-
-                                StringBuilder url = new StringBuilder();
-                                url.append(scheme)
-                                        .append("://")
-                                        .append(serverName)
-                                        .append(servletContext)
-                                        .append("/activation")
-                                        .append("?")
-                                        .append("activation=")
-                                        .append(aesUtil.encrypt(SALT, IV, activationToken, activationData));
+                            if (accountManager.wrapUpRegistration(voucher, user, pass, deviceId, sessionCreated, sessionId)) {
+                                // Publication happens only after the registration transaction committed.
+                                session.setAttribute("user", user);
+                                session.setAttribute("deviceId", deviceId);
 
                                 // TODO: start it in a new thread
-                               // SendHtmlEmail.generateAndSendEmail(email, url.toString());
-                            } else {
-                                JSONObject json_ = new JSONObject();
-                                json_.put("Error", "Registration failed");
-                                response.setContentType("application/json");
-                                response.setCharacterEncoding("utf-8");
-                                response.setStatus(502);
+                                // SendHtmlEmail.generateAndSendEmail(email, url.toString());
 
+                                buildRegistrationResponse(request, response, session, reg, deviceId, sessionId, context);
+                            } else {
                                 try {
                                     // full delete
-                                    SQLAccess.deleteUser(user, context);
+                                    accountManager.deleteUser(user);
                                 } catch (Exception e1) {
                                     log.info("User delete(reset) FAILED for voucher:" + voucher + "!");
-                                    throw new ServletException(e1.getCause().toString());
+                                    throw new ServletException(e1.getCause() != null ? e1.getCause().toString() : e1.getMessage());
                                 }
-
-                                response.getWriter().write(json_.toString());
-                                response.flushBuffer();
+                                RegistrationResponses.wrapUpFailed(response);
+                                session.invalidate();
                                 return;
                             }
-
-                            buildRegistrationResponse(response, session, ios, WebView, M, deviceId, sessionID, json, context);
                         } else {
-                            response.setContentType("application/json");
-                            response.setStatus(502);
-                            PrintWriter out = response.getWriter();
-                            SQLAccess.resetVoucher(voucher, user, context);
-                            out.print(new_hash);
-                            out.flush();
+                            voucherManager.resetVoucher(voucher, user);
+                            RegistrationResponses.uniqueConstraintFailed(response, newHash);
                         }
                     } else {
                         // hmac error
-                        response.sendError(HttpServletResponse.SC_BAD_REQUEST, "hmac error");
+                        RegistrationResponses.hmacError(response);
                     }
                 } catch (Exception e) {
                     // servlet runtime error
                     try {
-                        SQLAccess.resetVoucher(voucher, user, context);
-                        response.setContentType("application/json");
-                        response.setStatus(502);
-                        PrintWriter out = response.getWriter();
-                        JSONObject json = new JSONObject();
-                        json.put("Registration", "failed");
-                        json.put("Email", "false");
-                        json.put("Message", "I have gone to smoke a cigarette!");
-                        out.print(json);
-                        out.flush();
+                        voucherManager.resetVoucher(voucher, user);
+                        RegistrationResponses.runtimeFailure(response);
                     } catch (Exception e1) {
                         log.info("Voucher reset FAILED for vouchet:" + voucher + "!");
-                        throw new ServletException(e1.getCause().toString());
+                        throw new ServletException(e1.getCause() != null ? e1.getCause().toString() : e1.getMessage());
                     }
                 }
             }
         } else {
             // email format failed
             try {
-                SQLAccess.resetVoucher(voucher, user, context);
+                voucherManager.resetVoucher(voucher, user);
             } catch (Exception e1) {
                 log.info("Voucher reset FAILED for vouchet:" + voucher + "!");
-                throw new ServletException(e1.getCause().toString());
+                throw new ServletException(e1.getCause() != null ? e1.getCause().toString() : e1.getMessage());
             }
 
-            response.setContentType("application/json");
-            response.setStatus(502);
-            PrintWriter out = response.getWriter();
-            JSONObject json = new JSONObject();
-            json.put("Registration", "failed");
-            json.put("Email", "false");
-            json.put("Message", "Not a valid email format!");
-            out.print(json);
-            out.flush();
+            RegistrationResponses.emailValidationFailed(response);
         }
         } finally {
             log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
         }
     }
 
-    private void buildRegistrationResponse(
-            HttpServletResponse response,
-            HttpSession session,
-            String ios,
-            String WebView,
-            String M,
-            String deviceId,
-            String sessionID,
-            JSONObject json,
-            ServletContext context
-    ) throws Exception {
-        List<String> token2 = SQLAccess.getToken2(deviceId, context);
-        String xsrfToken = aesUtil.encrypt(SALT, IV, token2.get(1), token2.get(0));
+    private void buildRegistrationResponse(HttpServletRequest request, HttpServletResponse response,
+                                            HttpSession session, RegistrationRequest reg, String deviceId,
+                                            String sessionId, ServletContext context) throws IOException {
+        SessionTokens tokens = toSessionTokens(deviceSessionManager.getToken2(deviceId));
+        String xsrfToken = cryptoService.encrypt(SALT, IV, tokens.time(), tokens.token());
 
-        String actualToken;
-        if (xsrfToken.endsWith("=")) {
-            actualToken = xsrfToken.substring(0, xsrfToken.length() - 1);
-        } else {
-            actualToken = xsrfToken;
-        }
+        String actualToken = xsrfToken.endsWith("=")
+                ? xsrfToken.substring(0, xsrfToken.length() - 1)
+                : xsrfToken;
 
-        Cookie c = new Cookie("XSRF-TOKEN", actualToken);
-        c.setSecure(true);
-        c.setMaxAge(session.getMaxInactiveInterval());
-        response.addCookie(c);
-        session.setAttribute(c.getName(), c.getValue());
+        session.setAttribute("XSRF-TOKEN", actualToken);
 
-        if (ios != null) {
-            // native mobile
+        RegistrationSuccess success = new RegistrationSuccess(
+                context.getContextPath(), session.getMaxInactiveInterval(), sessionId, tokens.token(), actualToken);
+
+        if (reg.mobileClient()) {
             log.info("1");
-            response.setContentType("application/json");
-            response.setCharacterEncoding("utf-8");
-            response.setStatus(200);
-            PrintWriter out = response.getWriter();
-            json.put("success", 1);
-            json.put("JSESSIONID", sessionID);
-            json.put("X-Token", token2.get(0));
-            out.print(json.toString());
-            out.flush();
-        } else if (WebView != null && WebView.contains("Mobile") && M.equals("M")) {
-            // mobile webview
+            RegistrationResponses.nativeMobileSucceeded(response, success);
+        } else if (reg.mobileWebview()) {
             log.info("2");
-            response.addHeader("X-Token", token2.get(0));
-            json.put("Session", "raked");
-            json.put("Success", "true");
-            json.put("JSESSIONID", sessionID);
-            json.put("X-Token", token2.get(0));
-            response.sendRedirect(context.getContextPath() + "/tabularasa.html?JSESSIONID=" + sessionID);
+            RegistrationResponses.mobileWebviewSucceeded(response, success, context.getContextPath());
         } else {
-            // standard path
             log.info("3");
-            response.addHeader("X-Token", token2.get(0));
-            PrintWriter out = response.getWriter();
-            json.put("Session", "raked");
-            json.put("Success", "true");
-            json.put("JSESSIONID", sessionID);
-            json.put("X-Token", token2.get(0));
-            out.print(json.toString());
-            out.flush();
+            RegistrationResponses.standardSucceeded(response, success);
         }
+    }
+
+    private SessionTokens toSessionTokens(java.util.List<String> token2) {
+        return new SessionTokens(token2.get(0), token2.get(1));
     }
 
     @Override
@@ -294,10 +210,5 @@ public class Registration extends HttpServlet implements Serializable {
         } finally {
             log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
         }
-    }
-
-    @Override
-    public void destroy() {
-        // do nothing.
     }
 }

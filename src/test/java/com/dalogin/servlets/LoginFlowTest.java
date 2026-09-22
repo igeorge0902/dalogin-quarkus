@@ -219,14 +219,14 @@ class LoginFlowTest {
     // ──────────────────────────────────────────────────────────────
     @Test
     @Order(6)
-    @DisplayName("GET /admin — no session → 502 (AuthFilter rejects)")
+    @DisplayName("GET /admin — no session → 502 (AdminServlet rejects, invalid session)")
     void adminWithoutSession() {
         given()
             .when()
                 .get("/admin")
             .then()
                 .statusCode(502)
-                .body("'Error Details'.Success", equalTo("false"));
+                .body("Success", equalTo(false));
     }
 
     // ──────────────────────────────────────────────────────────────

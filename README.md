@@ -52,9 +52,9 @@ dalogin (:8080, /login)
 | `HelloWorld` servlet | Login entry point — HMAC verification, session + token creation |
 | `AuthFilter` | Guards `/admin`, `/CheckOut`, `/GetAllPurchases`, `/ManagePurchases`, `/logout` — checks session + XSRF cookie |
 | `ServiceClient` | RESTEasy client that proxies requests to mbook/mbooks with forwarded headers (X-Token, Ciphertext, cookies, uuid, token2, TIME_) |
-| `SQLAccess` | Static JDBC layer wrapping stored-procedure calls to `login_` database |
-| `DBConnectionManager` | Raw JDBC connections; catalog set from `SystemConstants.DB_CATALOG` |
-| `SystemConstants` | Centralized config — `DB_CATALOG` (from `DB_URL` env var), `getServiceUrl()` (from `WILDFLY_URL` env var) |
+| `AccountManager`, `VoucherManager`, `DeviceSessionManager`, `PasswordResetManager` | CDI-injected persistence beans (`persistence/...`) wrapping stored-procedure calls to `login_`; each owns its own `Connection`/`Statement`/`ResultSet` lifecycle via injected `DataSource` |
+| `CryptoService` | Stateless CDI bean for AES encrypt/decrypt, injected wherever a Servlet/filter previously held a mutable `AesUtil`/`Cipher` field |
+| `SystemConstants` | Centralized config — `getServiceUrl()` (from `WILDFLY_URL` env var) |
 
 ## Database
 
@@ -66,7 +66,8 @@ Key tables: `logins`, `devices`, `device_states`, `Last_seen`, `Tokens`, `vouche
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DB_URL` | `jdbc:mysql://localhost:3306/login_` | JDBC URL for the login_ database |
+| `QUARKUS_DATASOURCE_JDBC_URL` | `jdbc:mysql://localhost:3306/login_` | JDBC URL for the login_ database (Quarkus Agroal datasource, injected into the persistence Manager beans) |
+| `QUARKUS_DATASOURCE_USERNAME` / `QUARKUS_DATASOURCE_PASSWORD` | — | Datasource credentials |
 | `WILDFLY_URL` | `http://localhost:8888` | Base URL for downstream services (Apache proxy in K8s) |
 
 ## Build & Run

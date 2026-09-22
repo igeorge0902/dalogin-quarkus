@@ -5,20 +5,26 @@ package com.dalogin.servlets;
  * @year 2015
  */
 
-import com.dalogin.SQLAccess;
-import com.dalogin.utils.AesUtil;
+import com.dalogin.crypto.CryptoService;
+import com.dalogin.persistence.PersistenceOperationException;
+import com.dalogin.persistence.account.AccountManager;
+import com.dalogin.persistence.devicesession.DeviceSessionManager;
+import com.dalogin.persistence.devicesession.SessionTokens;
+import com.dalogin.servlets.requestrecord.LoginRequest;
+import com.dalogin.servlets.responsemap.LoginResponses;
+import com.dalogin.servlets.responsemap.LoginSuccess;
 import com.dalogin.utils.hmac512;
-import jakarta.servlet.ServletContext;
+import jakarta.inject.Inject;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.*;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import org.jboss.logging.Logger;
-import org.json.JSONObject;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.io.Serializable;
-import java.util.List;
 
 @WebServlet(urlPatterns = "/HelloWorld", name = "HelloWorld")
 public class HelloWorld extends HttpServlet implements Serializable {
@@ -29,17 +35,17 @@ public class HelloWorld extends HttpServlet implements Serializable {
     private static final String SALT = "3FF2EC019C627B945225DEBAD71A01B6985FE84C95A70EB132882F88C0A59A55";
     private static final String IV = "F27D5C9927726BCEFE7510B1BDD3D137";
     private static final String PASSPHRASE = "SecretPassphrase";
-    private static final int KEYSIZE = 128;
-    private static final int ITERATIONCOUNT = 1000;
 
     private static final Logger log = Logger.getLogger(Logger.class.getName());
 
-    private AesUtil aesUtil;
+    @Inject
+    CryptoService cryptoService;
 
-    @Override
-    public void init() throws ServletException {
-        aesUtil = new AesUtil(KEYSIZE, ITERATIONCOUNT);
-    }
+    @Inject
+    AccountManager accountManager;
+
+    @Inject
+    DeviceSessionManager deviceSessionManager;
 
     /**
      * Authentication via POST.
@@ -52,68 +58,37 @@ public class HelloWorld extends HttpServlet implements Serializable {
         String uri = request.getRequestURI();
         log.debugf("HTTP request started: servlet=%s, method=%s, uri=%s", servletName, method, uri);
         try {
+            response.setContentType("application/json");
+            response.setCharacterEncoding("utf-8");
 
-        response.setContentType("application/json");
-        response.setCharacterEncoding("utf-8");
+            // Invalidate old session if exists
+            HttpSession oldSession = request.getSession(false);
+            if (oldSession != null) {
+                oldSession.invalidate();
+            }
 
-        // Invalidate old session if exists
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            session.invalidate();
-        }
+            LoginRequest login = LoginRequest.from(request);
+            if (!login.hasRequiredValues()) {
+                LoginResponses.missingRequiredInput(response);
+                return;
+            }
 
-        ServletContext context = request.getServletContext();
+            // Preserve the current numeric validation. The value itself is not otherwise used.
+            login.validatedMicroTime();
 
-        // Extract headers/parameters
-        String rawHmac = request.getHeader("X-HMAC-HASH");
-        String rawContentLength = request.getHeader("Content-Length");
-        String rawTime = request.getHeader("X-MICRO-TIME");
-        String rawPass = request.getParameter("pswrd");
-        String rawUser = request.getParameter("user");
-        String rawDeviceId = request.getParameter("deviceId");
+            String hmacHash = hmac512.getLoginHmac512(
+                    login.user(), login.password(), login.deviceId(), login.microTime(), login.contentLength());
+            log.debug("Handshake validation executed for login flow");
 
-        if (rawHmac == null || rawContentLength == null || rawTime == null
-                || rawPass == null || rawUser == null || rawDeviceId == null) {
-            response.setStatus(502);
-            JSONObject err = new JSONObject();
-            err.put("Success", "false");
-            err.put("Message", "Missing required headers or parameters");
-            writeJson(response, err);
-            return;
-        }
+            String deviceId = decryptDeviceId(login.deviceId(), login.encryptedDeviceId());
+            String passwordHash = accountManager.getHash(login.password(), login.user());
 
-        String hmac = rawHmac.trim();
-        String contentLength = rawContentLength.trim();
-        String time = rawTime.trim();
-        String pass = rawPass.trim();
-        String user = rawUser.trim();
-        String deviceId = rawDeviceId.trim();
-        String ios = request.getParameter("ios");
-        String webView = request.getHeader("User-Agent");
-        String M = request.getHeader("M");
-        if (M == null) M = "";
+            if (!login.password().equals(passwordHash) || !login.hmac().equals(hmacHash)) {
+                LoginResponses.authenticationFailed(response);
+                return;
+            }
 
-        String deviceId_ = request.getHeader("M-Device");
-        long T = Long.parseLong(time.trim());
-
-        String hmacHash = hmac512.getLoginHmac512(user, pass, deviceId, time, contentLength);
-        log.debug("Handshake validation executed for login flow");
-
-        try {
-            deviceId = aesUtil.decrypt(SALT, IV, PASSPHRASE, deviceId_);
-            log.debug("Encrypted device identifier was processed");
-        } catch (Exception e) {
-            log.debug("No encrypted device identifier provided for decryption");
-        }
-
-        String hash1 = hashPassword(pass, user, context);
-
-        // Validate password and HMAC
-        if (pass.equals(hash1) && hmac.equals(hmacHash)) {
-            createSession(request, context, response, user, deviceId, ios, webView, M);
-        } else {
-            sendAuthFailed(response);
-        }
+            createSession(request, response, login.user(), deviceId, login.mobileClient());
         } finally {
             log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
         }
@@ -153,127 +128,66 @@ public class HelloWorld extends HttpServlet implements Serializable {
         }
     }
 
-    @Override
-    public void destroy() {
+    private String decryptDeviceId(String fallbackDeviceId, String encryptedDeviceId) {
+        try {
+            String decrypted = cryptoService.decrypt(SALT, IV, PASSPHRASE, encryptedDeviceId);
+            log.debug("Encrypted device identifier was processed");
+            return decrypted;
+        } catch (Exception e) {
+            log.debug("No encrypted device identifier provided for decryption");
+            return fallbackDeviceId;
+        }
     }
 
-    private void createSession(HttpServletRequest request, ServletContext context, HttpServletResponse response,
-                               String user, String deviceId, String ios, String webView, String M)
-            throws ServletException, IOException {
-
+    /**
+     * Creates a pending session (needed for its ID/creation time), atomically establishes the
+     * device/session/token rows, and only then publishes session attributes and writes the
+     * response. A persistence failure rolls back the transaction and invalidates the pending
+     * session instead of retrying.
+     */
+    private void createSession(HttpServletRequest request, HttpServletResponse response,
+                                String user, String deviceId, boolean mobileClient) throws IOException {
         HttpSession session = request.getSession(true);
-        long sessionCreated = session.getCreationTime();
-        String sessionID = session.getId();
+        session.setMaxInactiveInterval(30 * 60);
 
+        SessionTokens tokens;
+        try {
+            tokens = deviceSessionManager.establishLogin(deviceId, user, session.getCreationTime(), session.getId());
+        } catch (PersistenceOperationException e) {
+            session.invalidate();
+            log.errorf(e, "Session persistence failed for deviceId=%s", deviceId);
+            LoginResponses.sessionPersistenceFailed(response);
+            return;
+        }
+
+        String xsrfToken;
+        try {
+            xsrfToken = cryptoService.encrypt(SALT, IV, tokens.time(), tokens.token());
+        } catch (Exception e) {
+            session.invalidate();
+            throw new IOException("Failed to prepare the login response", e);
+        }
+
+        String actualToken = xsrfToken.endsWith("=")
+                ? xsrfToken.substring(0, xsrfToken.length() - 1)
+                : xsrfToken.trim();
+
+        // Publication happens only after the database transaction and token preparation succeeded.
         synchronized (session) {
             session.setAttribute("user", user);
             session.setAttribute("deviceId", deviceId);
             session.removeAttribute("pswrd");
+            session.setAttribute("XSRF-TOKEN", actualToken);
+            session.setAttribute("TIME_", tokens.time());
         }
 
-        try {
-            SQLAccess.insertDevice(deviceId, user, context);
-            SQLAccess.insertSessionCreated(deviceId, sessionCreated, sessionID, context);
-        } catch (Exception e) {
-            throw new ServletException(e.getCause() != null ? e.getCause().toString() : e.getMessage(), e);
-        }
-
-        session.setMaxInactiveInterval(30 * 60);
-
-        try {
-            List<String> token2 = SQLAccess.getToken2(deviceId, context);
-
-            // Guard against race condition: if insertSessionCreated hasn't committed
-            // yet, getToken2 may return an empty list. Retry once after a short delay.
-            if (token2.size() < 2) {
-                try { Thread.sleep(100); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
-                token2 = SQLAccess.getToken2(deviceId, context);
-            }
-            if (token2.size() < 2) {
-                log.error("getToken2 returned empty for deviceId=" + deviceId + " after retry");
-                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                JSONObject err = new JSONObject()
-                        .put("Success", "false")
-                        .put("Message", "Session token not yet available, please retry");
-                writeJson(response, err);
-                return;
-            }
-
-            String xsrfToken = aesUtil.encrypt(SALT, IV, token2.get(1), token2.get(0));
-
-            String actualToken = xsrfToken.endsWith("=")
-                    ? xsrfToken.substring(0, xsrfToken.length() - 1)
-                    : xsrfToken.trim();
-
-            // Cookies
-            Cookie cookieXSRF = new Cookie("XSRF-TOKEN", actualToken);
-            cookieXSRF.setSecure(true);
-            cookieXSRF.setHttpOnly(true);
-            cookieXSRF.setMaxAge(session.getMaxInactiveInterval());
-            cookieXSRF.setPath(context.getContextPath());
-
-            Cookie cookieToken = new Cookie("X-Token", token2.get(0));
-            cookieToken.setSecure(true);
-            cookieToken.setMaxAge(session.getMaxInactiveInterval());
-
-            response.addCookie(cookieXSRF);
-            response.addCookie(cookieToken);
-
-            response.addHeader("X-Token", token2.get(0));
-            response.setStatus(HttpServletResponse.SC_OK);
-
-            session.setAttribute(cookieXSRF.getName(), cookieXSRF.getValue());
-            session.setAttribute("TIME_", token2.get(1));
-
-            JSONObject json = (ios != null)
-                    ? buildMobileResponse(sessionID, token2)
-                    : buildWebResponse(token2);
-
-            writeJson(response, json);
-
-        } catch (Exception e) {
-            throw new ServletException(e.getCause() != null ? e.getCause().toString() : e.getMessage(), e);
-        }
-    }
-
-    private JSONObject buildMobileResponse(String sessionID, List<String> token2) {
-        return new JSONObject()
-                .put("success", 1)
-                .put("JSESSIONID", sessionID)
-                .put("X-Token", token2.get(0));
-    }
-
-    private JSONObject buildWebResponse(List<String> token2) {
-        return new JSONObject()
-                .put("Session", "raked")
-                .put("Success", "true")
-                .put("X-Token", token2.get(0));
-    }
-
-    private void sendAuthFailed(HttpServletResponse response) throws IOException {
-        response.setContentType("application/json");
-        response.setCharacterEncoding("utf-8");
-        response.setStatus(HttpServletResponse.SC_BAD_GATEWAY);
-
-        JSONObject json = new JSONObject()
-                .put("Session creation", "failed")
-                .put("Success", "false");
-
-        writeJson(response, json);
-    }
-
-    private void writeJson(HttpServletResponse response, JSONObject json) throws IOException {
-        try (PrintWriter out = response.getWriter()) {
-            out.print(json.toString());
-            out.flush();
-        }
-    }
-
-    private String hashPassword(String pass, String user, ServletContext context) throws ServletException {
-        try {
-            return SQLAccess.getHash(pass, user, context);
-        } catch (Exception e) {
-            throw new ServletException(e.getMessage());
-        }
+        LoginResponses.loginSucceeded(response, new LoginSuccess(
+                request.getServletContext().getContextPath(),
+                session.getMaxInactiveInterval(),
+                session.getId(),
+                tokens.token(),
+                actualToken,
+                mobileClient
+        ));
     }
 }

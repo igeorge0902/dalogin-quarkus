@@ -5,9 +5,12 @@ package com.dalogin.servlets;
  * @Year: 2015
  */
 
-import com.dalogin.SQLAccess;
-import com.dalogin.utils.AesUtil;
+import com.dalogin.crypto.CryptoService;
+import com.dalogin.persistence.devicesession.DeviceSessionManager;
+import com.dalogin.persistence.voucher.VoucherManager;
+import com.dalogin.servlets.responsemap.ActivationResponses;
 import com.dalogin.utils.SendHtmlEmail;
+import jakarta.inject.Inject;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -16,12 +19,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.jboss.logging.Logger;
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -33,15 +34,16 @@ public class RegActivation extends HttpServlet {
     private static final String SALT = "3FF2EC019C627B945225DEBAD71A01B6985FE84C95A70EB132882F88C0A59A55";
     private static final String IV = "F27D5C9927726BCEFE7510B1BDD3D137";
     private static final String activationToken_ = "G";
-    private static final int KEYSIZE = 128;
-    private static final int ITERATIONCOUNT = 1000;
     private static final Logger log = Logger.getLogger(Logger.class.getName());
 
-    private AesUtil aesUtil;
+    @Inject
+    CryptoService cryptoService;
 
-    public void init() throws ServletException {
-        aesUtil = new AesUtil(KEYSIZE, ITERATIONCOUNT);
-    }
+    @Inject
+    DeviceSessionManager deviceSessionManager;
+
+    @Inject
+    VoucherManager voucherManager;
 
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String servletName = getServletName();
@@ -49,8 +51,8 @@ public class RegActivation extends HttpServlet {
         String uri = request.getRequestURI();
         log.debugf("HTTP request started: servlet=%s, method=%s, uri=%s", servletName, method, uri);
         try {
-            HttpSession session = request.getSession(false);
-            ServletContext context = session.getServletContext();
+            // No HttpSession is created here: it previously existed only to reach ServletContext.
+            ServletContext context = request.getServletContext();
             String ciphertext = request.getHeader("Ciphertext");
             if (ciphertext != null) ciphertext = ciphertext.trim();
             StringBuilder sb = new StringBuilder();
@@ -63,10 +65,10 @@ public class RegActivation extends HttpServlet {
             String user = jObj.getString("user");
             String deviceId = jObj.getString("deviceId");
             try {
-                List<String> token2 = SQLAccess.getToken2(deviceId, context);
+                List<String> token2 = deviceSessionManager.getToken2(deviceId);
                 boolean isValid = token2.get(0).equals(ciphertext);
                 if (isValid) {
-                    List<String> list = SQLAccess.getActivationToken(user, context);
+                    List<String> list = voucherManager.getActivationToken(user);
                     String token = list.get(0);
                     String email = list.get(1);
                     // send email for activation
@@ -79,27 +81,15 @@ public class RegActivation extends HttpServlet {
                     StringBuilder url = new StringBuilder();
                     url.append(scheme).append("://")
                             .append(serverName).append(servletContext).append("/activation")
-                            .append("?").append("activation=").append(aesUtil.encrypt(SALT, IV, activationToken_, activationData));
+                            .append("?").append("activation=").append(cryptoService.encrypt(SALT, IV, activationToken_, activationData));
                     SendHtmlEmail.generateAndSendEmail(email, url.toString());
-                    JSONObject json = new JSONObject();
-                    json.put("Success", "true");
-                    json.put("Email was sent to:", email);
-                    response.setContentType("application/json");
-                    response.setCharacterEncoding("utf-8");
-                    response.setStatus(200);
-                    response.getWriter().write(json.toString());
+                    ActivationResponses.emailSent(response, email);
                 } else {
-                    response.sendError(HttpServletResponse.SC_PRECONDITION_FAILED, "Line 125");
+                    ActivationResponses.preconditionFailed(response);
                 }
             } catch (Exception e) {
                 log.error("Activation POST flow failed", e);
-                JSONObject json = new JSONObject();
-                json.put("Error", "activation_failed");
-                response.setContentType("application/json");
-                response.setCharacterEncoding("utf-8");
-                response.setStatus(502);
-                response.getWriter().write(json.toString());
-                response.flushBuffer();
+                ActivationResponses.activationFailed(response);
             }
         } finally {
             log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
@@ -118,7 +108,7 @@ public class RegActivation extends HttpServlet {
             ServletContext context = session.getServletContext();
             String parameter = request.getQueryString();
             String[] activationData = parameter.split("=");
-            String query = aesUtil.decrypt(SALT, IV, activationToken_, activationData[1]);
+            String query = cryptoService.decrypt(SALT, IV, activationToken_, activationData[1]);
             String[] params = query.split("&");
             Map<String, String> queryMap = new HashMap<>();
             String user = "";
@@ -139,32 +129,15 @@ public class RegActivation extends HttpServlet {
             }
             //TODO: activate the voucher
             try {
-                SQLAccess.activateVoucher(token2, user, context);
+                voucherManager.activateVoucher(token2, user);
             } catch (Exception e) {
                 log.error("Activation GET flow failed", e);
-                JSONObject json = new JSONObject();
-                json.put("Error", "activation_failed");
-                response.setContentType("application/json");
-                response.setCharacterEncoding("utf-8");
-                response.setStatus(502);
-                response.getWriter().write(json.toString());
-                response.flushBuffer();
+                ActivationResponses.activationFailed(response);
             }
             session.invalidate();
-            PrintWriter out = response.getWriter();
-            JSONObject json = new JSONObject();
-            JSONArray list = new JSONArray();
-            list.put(queryMap);
-            json.put("activation", list);
-            json.put("Registration:", "active");
-            out.print(json.toString());
-            out.flush();
+            ActivationResponses.activationCompleted(response, queryMap);
         } finally {
             log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
         }
-    }
-
-    public void destroy() {
-        // do nothing.
     }
 }

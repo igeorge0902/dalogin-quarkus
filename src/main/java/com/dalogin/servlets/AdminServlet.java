@@ -1,35 +1,40 @@
 package com.dalogin.servlets;
 
-import com.dalogin.SQLAccess;
 import com.dalogin.SystemConstants;
 import com.dalogin.client.ServiceClient;
-import jakarta.servlet.ServletContext;
+import com.dalogin.persistence.account.AccountManager;
+import com.dalogin.persistence.devicesession.DeviceSessionManager;
+import com.dalogin.servlets.responsemap.AdminResponses;
+import jakarta.inject.Inject;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.*;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import jakarta.ws.rs.core.Response;
 import org.jboss.logging.Logger;
-import org.json.JSONObject;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @WebServlet(urlPatterns = "/admin", name = "AdminServlet")
 public class AdminServlet extends HttpServlet {
     private static final long serialVersionUID = 5570497466931245289L;
     private static final Logger log = Logger.getLogger(AdminServlet.class);
-    private static final String APPLICATION_JSON = "application/json";
-    private static final String UTF_8 = "utf-8";
 
-    @Override
-    public void init() throws ServletException {
-        // Initialization logic if needed
-    }
+    @Inject
+    AccountManager accountManager;
+
+    @Inject
+    DeviceSessionManager deviceSessionManager;
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -52,12 +57,12 @@ public class AdminServlet extends HttpServlet {
         String sessionId = Optional.ofNullable(request.getParameter("JSESSIONID")).orElseGet(() -> session != null ? session.getId() : null);
         log.debug("Session identifier resolved for admin flow");
 
-        try {
-            performTask(request, response, session);
-        } catch (Exception e) {
-            log.error("Error during task execution", e);
-            sendErrorResponse(response, 502, "Internal server error");
-        }
+            try {
+                performTask(request, response, session);
+            } catch (Exception e) {
+                log.error("Error during task execution", e);
+                AdminResponses.error(response, 502, "Internal server error");
+            }
         } finally {
             log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
         }
@@ -65,62 +70,61 @@ public class AdminServlet extends HttpServlet {
 
     private void performTask(HttpServletRequest request, HttpServletResponse response, HttpSession session) throws Exception {
         if (session == null) {
-            sendErrorResponse(response, 502, "Session is invalid");
+            AdminResponses.error(response, 502, "Session is invalid");
             return;
         }
 
-        ServletContext context = session.getServletContext();
         String deviceId = (String) session.getAttribute("deviceId");
         String user = (String) session.getAttribute("user");
 
         if (deviceId == null || user == null) {
-            sendErrorResponse(response, 502, "Missing deviceId or user in session");
+            AdminResponses.error(response, 502, "Missing deviceId or user in session");
             return;
         }
 
-        String token = SQLAccess.getToken(deviceId, context);
-        String activationResponse = SQLAccess.checkActivation(user, context);
+        String token = deviceSessionManager.getToken(deviceId);
+        String activationResponse = accountManager.checkActivation(user);
 
         if ("S".equals(activationResponse)) {
-            handleActivationRequired(request, response, session, context, deviceId, user, token);
+            handleActivationRequired(request, response, session, deviceId, user, token);
         } else if (token != null) {
-            handleLoginForActivedUser(request, response, session, context, deviceId, user, token);
+            handleLoginForActivedUser(request, response, session, deviceId, user, token);
         } else {
-            sendErrorResponse(response, 502, "Invalid token or session");
+            AdminResponses.error(response, 502, "Invalid token or session");
         }
     }
 
-    private void handleActivationRequired(HttpServletRequest request, HttpServletResponse response, HttpSession session, ServletContext context, String deviceId, String user, String token) throws ServletException, IOException, CertificateException, KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+    private void handleActivationRequired(HttpServletRequest request, HttpServletResponse response, HttpSession session,
+                                           String deviceId, String user, String token)
+            throws ServletException, IOException, CertificateException, KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
         List<String> token2;
         try {
-            token2 = SQLAccess.getToken2(deviceId, context);
+            token2 = deviceSessionManager.getToken2(deviceId);
         } catch (Exception e) {
             log.error("Error fetching token2", e);
-            sendErrorResponse(response, 502, "User does not bear valid parameters");
+            AdminResponses.error(response, 502, "User does not bear valid parameters");
             return;
         }
 
-        response.setContentType(APPLICATION_JSON);
-        response.setCharacterEncoding(UTF_8);
-        response.setHeader("Response", "S");
-        response.setStatus(300);
-        response.addHeader("X-Token", token2.get(0));
+        AdminResponses.prepareActivationRequired(response, token2.get(0));
 
         Map<String, String> attributes = buildAttributes(session, user, token2.get(0));
-        callServiceAndRespond(response, request, context, user, token, attributes);
+        callServiceAndRespond(response, request, user, token, attributes);
     }
 
-    private void handleLoginForActivedUser(HttpServletRequest request, HttpServletResponse response, HttpSession session, ServletContext context, String deviceId, String user, String token) throws ServletException, IOException, CertificateException, KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+    private void handleLoginForActivedUser(HttpServletRequest request, HttpServletResponse response, HttpSession session,
+                                            String deviceId, String user, String token)
+            throws ServletException, IOException, CertificateException, KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
         List<String> token2;
         try {
-            token2 = SQLAccess.getToken2(deviceId, context);
+            token2 = deviceSessionManager.getToken2(deviceId);
         } catch (Exception e) {
             log.error("Error fetching token2", e);
             throw new ServletException(e.getCause().toString());
         }
 
         Map<String, String> attributes = buildAttributes(session, user, token2.get(0));
-        callServiceAndRespond(response, request, context, user, token, attributes);
+        callServiceAndRespond(response, request, user, token, attributes);
     }
 
     private Map<String, String> buildAttributes(HttpSession session, String user, String token2) {
@@ -131,35 +135,15 @@ public class AdminServlet extends HttpServlet {
         return attributes;
     }
 
-    private void callServiceAndRespond(HttpServletResponse response, HttpServletRequest request, ServletContext context, String user, String token, Map<String, String> attributes) throws IOException, CertificateException, KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
-       // String webApiContext = context.getInitParameter("webApiContext");
+    private void callServiceAndRespond(HttpServletResponse response, HttpServletRequest request, String user,
+                                        String token, Map<String, String> attributes)
+            throws IOException, CertificateException, KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
         String serviceUrl = SystemConstants.getServiceUrl();
         ServiceClient client = new ServiceClient(serviceUrl + "/mbook-1", request, attributes);
         Response apiResponse = client.callGetData(user.trim(), token.trim());
         String responseBody = apiResponse.readEntity(String.class);
         client.close();
 
-        PrintWriter out = response.getWriter();
-        out.print(responseBody);
-        out.flush();
-    }
-
-    private void sendErrorResponse(HttpServletResponse response, int statusCode, String errorMessage) throws IOException {
-        response.setContentType(APPLICATION_JSON);
-        response.setCharacterEncoding(UTF_8);
-        response.setStatus(statusCode);
-
-        JSONObject json = new JSONObject();
-        json.put("Error Message", errorMessage);
-        json.put("Success", false);
-
-        PrintWriter out = response.getWriter();
-        out.print(json.toString());
-        out.flush();
-    }
-
-    @Override
-    public void destroy() {
-        // Cleanup logic if needed
+        AdminResponses.downstreamBody(response, responseBody);
     }
 }

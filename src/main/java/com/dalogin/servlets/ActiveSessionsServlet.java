@@ -1,5 +1,6 @@
 package com.dalogin.servlets;
 
+import com.dalogin.servlets.responsemap.ActiveSessionsResponses;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -12,7 +13,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -40,10 +40,6 @@ public class ActiveSessionsServlet extends HttpServlet {
         String uri = request.getRequestURI();
         log.debugf("HTTP request started: servlet=%s, method=%s, uri=%s", servletName, method, uri);
         try {
-
-            response.setContentType("application/json");
-            response.setCharacterEncoding("utf-8");
-
             ServletContext context = request.getServletContext();
 
             @SuppressWarnings("unchecked")
@@ -87,11 +83,7 @@ public class ActiveSessionsServlet extends HttpServlet {
 
             log.debugf("Active sessions count=%d", sessionsArray.length());
 
-            response.setStatus(HttpServletResponse.SC_OK);
-            try (PrintWriter out = response.getWriter()) {
-                out.print(sessionsArray.toString());
-                out.flush();
-            }
+            ActiveSessionsResponses.sessionsList(response, sessionsArray);
         } finally {
             log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
         }

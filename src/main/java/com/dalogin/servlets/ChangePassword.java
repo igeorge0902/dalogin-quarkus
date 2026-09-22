@@ -5,22 +5,22 @@ package com.dalogin.servlets;
  * @Year: 2017
  */
 
-import com.dalogin.SQLAccess;
-import com.dalogin.utils.AesUtil;
+import com.dalogin.crypto.CryptoService;
+import com.dalogin.persistence.passwordreset.PasswordResetManager;
+import com.dalogin.servlets.requestrecord.ForgotPasswordRequest;
+import com.dalogin.servlets.responsemap.PasswordResetResponses;
 import com.dalogin.utils.SendHtmlEmail;
 import com.dalogin.utils.hmac512;
+import jakarta.inject.Inject;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.jboss.logging.Logger;
-import org.json.JSONObject;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.io.Serializable;
 
 @WebServlet(urlPatterns = "/forgotPSw", name = "ChangePassword")
@@ -29,15 +29,13 @@ public class ChangePassword extends HttpServlet implements Serializable {
     private static final String SALT = "3FF2EC019C627B945225DEBAD71A01B6985FE84C95A70EB132882F88C0A59A55";
     private static final String IV = "F27D5C9927726BCEFE7510B1BDD3D137";
     private static final String PASSPHRASE = "SecretPassphrase";
-    private static final int KEYSIZE = 128;
-    private static final int ITERATIONCOUNT = 1000;
     private static final Logger log = Logger.getLogger(Logger.class.getName());
 
-    private AesUtil aesUtil;
+    @Inject
+    CryptoService cryptoService;
 
-    public void init() throws ServletException {
-        aesUtil = new AesUtil(KEYSIZE, ITERATIONCOUNT);
-    }
+    @Inject
+    PasswordResetManager passwordResetManager;
 
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String servletName = getServletName();
@@ -51,103 +49,57 @@ public class ChangePassword extends HttpServlet implements Serializable {
         ServletContext context = request.getServletContext();
         final long T2 = Long.parseLong(context.getAttribute("time").toString());
         // Actual logic goes here.
-        String hmac;
-        String contentLength;
-        String time;
+        ForgotPasswordRequest req;
         String email;
-        String deviceId;
-        String ios;
-        String WebView;
-        String M;
         long T;
         try {
-            // hmac is not encrypted, just the password inside
-            hmac = request.getHeader("X-HMAC-HASH").trim();
-            contentLength = request.getHeader("Content-Length");
-            time = request.getHeader("X-MICRO-TIME").trim();
-            email = request.getParameter("email");
-            deviceId = request.getParameter("deviceId").trim();
-            ios = request.getParameter("ios");
-            WebView = request.getHeader("User-Agent");
-            M = request.getHeader("M");
-            if (M == null) {
-                M = "";
-            }
-            String deviceId_ = request.getHeader("M-Device");
-            T = Long.parseLong(time.trim());
-            if (email != null) {
-                email = email.trim();
+            req = ForgotPasswordRequest.from(request);
+            T = Long.parseLong(req.microTime().trim());
+            if (req.rawEmail() != null) {
+                email = req.rawEmail().trim();
             } else {
-                PrintWriter out = response.getWriter();
-                JSONObject json = new JSONObject();
-                json.put("Session", "raked");
-                json.put("Success", "false");
-                json.put("Error", "no email!");
-                out.print(json.toString());
-                out.flush();
+                PasswordResetResponses.missingEmail(response);
                 return;
             }
-            String hmacHash = hmac512.getEmail_ForgetPSW_Hmac512(email, deviceId, time, contentLength);
+            String hmacHash = hmac512.getEmail_ForgetPSW_Hmac512(email, req.deviceId(), req.microTime(), req.contentLength());
             log.debug("Handshake validation executed for forgot password flow");
-            try {
-                deviceId = aesUtil.decrypt(SALT, IV, PASSPHRASE, deviceId_);
-                log.debug("Encrypted device identifier was processed");
-            } catch (Exception e) {
-                log.debug("No encrypted device identifier provided for decryption");
-            }
+            String deviceId = decryptDeviceId(req.deviceId(), req.encryptedDeviceId());
 
-            if (hmac.equals(hmacHash) && ((T + T2) > System.currentTimeMillis())) {
-                handleForgotPassword(response, email, T, time, ios, WebView, M, context);
+            if (req.hmac().equals(hmacHash) && ((T + T2) > System.currentTimeMillis())) {
+                handleForgotPassword(response, email, T, req.microTime());
             } else {
-                response.setContentType("application/json");
-                response.setCharacterEncoding("utf-8");
-                response.setStatus(502);
-                PrintWriter out = response.getWriter();
-                JSONObject json = new JSONObject();
-                json.put("Success", "false");
-                out.print(json.toString());
-                out.flush();
+                PasswordResetResponses.validationFailed(response);
             }
         } catch (Exception e) {
-            throw new ServletException(e.getCause().toString());
+            throw new ServletException(e.getCause() != null ? e.getCause().toString() : e.getMessage());
         }
         } finally {
             log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
         }
     }
 
-    private void handleForgotPassword(HttpServletResponse response, String email, long T, String time,
-                                       String ios, String WebView, String M, ServletContext context) throws Exception {
-        String token = SQLAccess.getForgotPswToken(email, T, context);
+    private String decryptDeviceId(String fallbackDeviceId, String encryptedDeviceId) {
+        try {
+            String decrypted = cryptoService.decrypt(SALT, IV, PASSPHRASE, encryptedDeviceId);
+            log.debug("Encrypted device identifier was processed");
+            return decrypted;
+        } catch (Exception e) {
+            log.debug("No encrypted device identifier provided for decryption");
+            return fallbackDeviceId;
+        }
+    }
+
+    private void handleForgotPassword(HttpServletResponse response, String email, long T, String time) throws Exception {
+        String token = passwordResetManager.getForgotPswToken(email, T);
         if (token.equalsIgnoreCase("ilt")) {
-            response.setContentType("application/json");
-            response.setCharacterEncoding("utf-8");
-            response.setStatus(200);
-            PrintWriter out = response.getWriter();
-            JSONObject json = new JSONObject();
-            json.put("Session", "raked");
-            json.put("Success", "false");
-            out.print(json.toString());
-            out.flush();
+            PasswordResetResponses.alreadyRequested(response);
         } else {
-            String encrypted_token = aesUtil.encrypt(SALT, IV, time, token);
+            String encryptedToken = cryptoService.encrypt(SALT, IV, time, token);
             // Construct requesting URL
             StringBuilder url = new StringBuilder();
-            url.append(encrypted_token.substring(31, 34));
+            url.append(encryptedToken.substring(31, 34));
             SendHtmlEmail.generateAndSendEmail(email, url.toString());
-            Cookie c = new Cookie("XSRF-TOKEN", encrypted_token);
-            c.setSecure(true);
-            c.setMaxAge(1800);
-            response.addCookie(c);
-            response.setContentType("application/json");
-            response.setCharacterEncoding("utf-8");
-            response.setStatus(200);
-            PrintWriter out = response.getWriter();
-            JSONObject json = new JSONObject();
-            json.put("Success", "true");
-            json.put("Code", encrypted_token.substring(31, 34));
-            out.print(json.toString());
-            out.flush();
+            PasswordResetResponses.requestSucceeded(response, encryptedToken, encryptedToken.substring(31, 34));
         }
     }
 
@@ -163,9 +115,5 @@ public class ChangePassword extends HttpServlet implements Serializable {
         } finally {
             log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
         }
-    }
-
-    public void destroy() {
-        // do nothing.
     }
 }

@@ -5,8 +5,9 @@ package com.dalogin.listeners;
  * @Year: 2015
  */
 
-import com.dalogin.SQLAccess;
+import com.dalogin.persistence.devicesession.DeviceSessionManager;
 import com.google.common.collect.SetMultimap;
+import jakarta.inject.Inject;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.annotation.WebListener;
@@ -40,6 +41,9 @@ public class CustomHttpSessionListener extends HttpServlet implements HttpSessio
     // callbacks, so Thread A's deviceId was overwritten by Thread B.
     private final ConcurrentHashMap<String, Map<String, String>> sessionAttributes = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Map<String, String>> sessionAttributes_ = new ConcurrentHashMap<>();
+
+    @Inject
+    DeviceSessionManager deviceSessionManager;
 
     public void init(ServletConfig config) {
     }
@@ -218,7 +222,7 @@ public class CustomHttpSessionListener extends HttpServlet implements HttpSessio
             sessions.removeAll(D_);
             // runs logging out to make the user look like logged_out
             try {
-                SQLAccess.logout(session.getId(), context);
+                deviceSessionManager.logout(session.getId());
             } catch (Exception e) {
                 // error handling for empty leafs
                 log.debug("No device left to remove during logout cleanup");

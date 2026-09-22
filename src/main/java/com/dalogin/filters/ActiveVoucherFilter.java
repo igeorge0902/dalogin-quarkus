@@ -5,7 +5,9 @@ package com.dalogin.filters;
  * @Year: 2015
  */
 
-import com.dalogin.SQLAccess;
+import com.dalogin.persistence.account.AccountManager;
+import com.dalogin.persistence.devicesession.DeviceSessionManager;
+import jakarta.inject.Inject;
 import jakarta.servlet.*;
 import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.http.Cookie;
@@ -23,10 +25,14 @@ import java.util.List;
 @WebFilter(servletNames = {"GetAllPurchases", "CheckOut", "ManagePurchases"})
 public class ActiveVoucherFilter implements Filter {
     private static final Logger log = Logger.getLogger(ActiveVoucherFilter.class);
-    private ServletContext context;
+
+    @Inject
+    AccountManager accountManager;
+
+    @Inject
+    DeviceSessionManager deviceSessionManager;
 
     public void init(FilterConfig fConfig) throws ServletException {
-        this.context = fConfig.getServletContext();
         log.debug("ActiveVoucherFilter initialized");
     }
 
@@ -69,7 +75,7 @@ public class ActiveVoucherFilter implements Filter {
             String deviceId = (String) session.getAttribute("deviceId");
             String activationResponse;
             try {
-                activationResponse = SQLAccess.checkActivation(user, context);
+                activationResponse = accountManager.checkActivation(user);
             } catch (Exception e) {
                 res.setContentType("application/json");
                 res.setCharacterEncoding("utf-8");
@@ -88,7 +94,7 @@ public class ActiveVoucherFilter implements Filter {
             if ("S".equals(activationResponse)) {
                 List<String> token2;
                 try {
-                    token2 = SQLAccess.getToken2(deviceId, context);
+                    token2 = deviceSessionManager.getToken2(deviceId);
                 } catch (Exception e) {
                     res.setContentType("application/json");
                     res.setCharacterEncoding("utf-8");

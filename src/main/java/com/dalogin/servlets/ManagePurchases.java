@@ -1,8 +1,16 @@
 package com.dalogin.servlets;
+/**
+ * @author George Gaspar
+ * @email: igeorge1982@gmail.com
+ * @Year: 2017
+ */
 
-import com.dalogin.SQLAccess;
 import com.dalogin.SystemConstants;
 import com.dalogin.client.ServiceClient;
+import com.dalogin.persistence.account.AccountManager;
+import com.dalogin.persistence.devicesession.DeviceSessionManager;
+import com.dalogin.servlets.responsemap.PurchaseResponses;
+import jakarta.inject.Inject;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -14,134 +22,92 @@ import jakarta.ws.rs.core.Response;
 import org.jboss.logging.Logger;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.io.Serializable;
-import java.security.KeyManagementException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @WebServlet(urlPatterns = "/ManagePurchases", name = "ManagePurchases")
 public class ManagePurchases extends HttpServlet implements Serializable {
-
     private static final long serialVersionUID = 2152364900906190486L;
     private static final Logger log = Logger.getLogger(ManagePurchases.class);
 
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+    @Inject
+    DeviceSessionManager deviceSessionManager;
+
+    @Inject
+    AccountManager accountManager;
+
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String servletName = getServletName();
         String method = request.getMethod();
         String uri = request.getRequestURI();
         log.debugf("HTTP request started: servlet=%s, method=%s, uri=%s", servletName, method, uri);
         try {
+            String responseBody;
             response.setContentType("application/json;charset=UTF-8");
-
             HttpSession session = request.getSession();
             ServletContext context = request.getServletContext();
             String webApi2Context = context.getInitParameter("webApi2Context");
-            Map<String, String> attributes = buildAuthAttributes(session, context);
-
+            Map<String, String> attributes = buildAuthAttributes(session);
             String serviceUrl = SystemConstants.getServiceUrl() + webApi2Context;
-            ServiceClient client = null;
-            String responseBody;
-
-            try {
-                client = new ServiceClient(serviceUrl, request, attributes);
-
-                Response apiResponse;
-                if (request.getParameter("ticketsToBeCancelled") != null) {
-                    apiResponse = client.managePurchases(request);
-                } else {
-                    apiResponse = client.deletePurchases(request);
-                }
-                responseBody = apiResponse.readEntity(String.class);
-            } catch (CertificateException | KeyStoreException |
-                     NoSuchAlgorithmException | KeyManagementException e) {
-                log.error("SSL configuration error", e);
-                throw new ServletException("SSL configuration error", e);
-            } finally {
-                if (client != null) {
-                    client.close();
-                }
-            }
-
-            try (PrintWriter out = response.getWriter()) {
-                out.print(responseBody);
-            }
+            ServiceClient client = createClient(serviceUrl, request, attributes);
+            Response apiResponse = request.getParameter("ticketsToBeCancelled") != null ? client.managePurchases(request) : client.deletePurchases(request);
+            responseBody = apiResponse.readEntity(String.class);
+            client.close();
+            PurchaseResponses.downstreamBody(response, responseBody);
         } finally {
             log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
         }
     }
 
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String servletName = getServletName();
         String method = request.getMethod();
         String uri = request.getRequestURI();
         log.debugf("HTTP request started: servlet=%s, method=%s, uri=%s", servletName, method, uri);
         try {
+            String responseBody;
             response.setContentType("application/json;charset=UTF-8");
-
             HttpSession session = request.getSession();
             ServletContext context = request.getServletContext();
             String webApi2Context = context.getInitParameter("webApi2Context");
-            Map<String, String> attributes = buildAuthAttributes(session, context);
-
+            Map<String, String> attributes = buildAuthAttributes(session);
             String serviceUrl = SystemConstants.getServiceUrl() + webApi2Context;
-            ServiceClient client = null;
-            String responseBody;
-
-            try {
-                client = new ServiceClient(serviceUrl, request, attributes);
-
-                String purchaseId = request.getParameter("purchaseId");
-                Response apiResponse = client.callGetTickets(purchaseId);
-                responseBody = apiResponse.readEntity(String.class);
-            } catch (CertificateException | KeyStoreException |
-                     NoSuchAlgorithmException | KeyManagementException e) {
-                log.error("SSL configuration error", e);
-                throw new ServletException("SSL configuration error", e);
-            } finally {
-                if (client != null) {
-                    client.close();
-                }
-            }
-
-            try (PrintWriter out = response.getWriter()) {
-                out.print(responseBody);
-            }
+            ServiceClient client = createClient(serviceUrl, request, attributes);
+            String purchaseId = request.getParameter("purchaseId");
+            Response apiResponse = client.callGetTickets(purchaseId);
+            responseBody = apiResponse.readEntity(String.class);
+            client.close();
+            PurchaseResponses.downstreamBody(response, responseBody);
         } finally {
             log.debugf("HTTP request completed: method=%s, uri=%s, status=%d", method, uri, response.getStatus());
         }
     }
 
-    /**
-     * Retrieve authentication/authorization attributes for API calls.
-     */
-    private Map<String, String> buildAuthAttributes(HttpSession session, ServletContext context)
-            throws ServletException {
+    private ServiceClient createClient(String serviceUrl, HttpServletRequest request, Map<String, String> attributes) throws ServletException {
+        try {
+            return new ServiceClient(serviceUrl, request, attributes);
+        } catch (Exception e) {
+            throw new ServletException("Unable to create service client", e);
+        }
+    }
+
+    private Map<String, String> buildAuthAttributes(HttpSession session) throws ServletException {
+        String uuid;
+        List<String> token2;
         String deviceId = (String) session.getAttribute("deviceId");
         String user = (String) session.getAttribute("user");
-
-        List<String> token2;
-        String uuid;
         try {
-            token2 = SQLAccess.getToken2(deviceId, context);
-            uuid = SQLAccess.getUUID(user, context);
+            token2 = deviceSessionManager.getToken2(deviceId);
+            uuid = accountManager.getUUID(user);
         } catch (Exception e) {
             log.error("Error fetching tokens/UUID", e);
             throw new ServletException("Unable to fetch user data", e);
         }
-
         if (token2 == null || token2.isEmpty()) {
             throw new ServletException("Missing authentication token");
         }
-
         Map<String, String> attributes = new HashMap<>();
         attributes.put("uuid", uuid);
         attributes.put("token2", token2.get(0));
