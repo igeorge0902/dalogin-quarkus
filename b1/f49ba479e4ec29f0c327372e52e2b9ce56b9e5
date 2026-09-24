@@ -1,0 +1,94 @@
+src/main/java/com/dalogin/servlets/responsemap/AdminResponses.java
+  h_d154d11af00b83 1-43
+src/main/java/com/dalogin/servlets/requestrecord/ForgotPasswordCodeRequest.java
+  h_d154d11af00b83 1-38
+src/main/java/com/dalogin/servlets/responsemap/RegistrationResponses.java
+  h_d154d11af00b83 1-98
+src/main/java/com/dalogin/servlets/requestrecord/LoginRequest.java
+  h_d154d11af00b83 1-67
+src/main/java/com/dalogin/persistence/passwordreset/PasswordResetManager.java
+  s_4f070cf415fa68::t_1f7e314ba2e8ae 1-69
+src/main/java/com/dalogin/servlets/responsemap/RegistrationWithoutVoucherSuccess.java
+  h_d154d11af00b83 1-14
+src/main/java/com/dalogin/servlets/responsemap/ActivationResponses.java
+  h_d154d11af00b83 1-43
+src/main/java/com/dalogin/crypto/CryptoService.java
+  s_4f070cf415fa68::t_31432b677794f6 1-25
+src/main/java/com/dalogin/servlets/support/ServletResponses.java
+  s_4f070cf415fa68::t_90ea25cc9be23c 1-50
+src/main/java/com/dalogin/servlets/responsemap/LogoutResponses.java
+  h_d154d11af00b83 1-27
+src/main/java/com/dalogin/persistence/devicesession/DeviceSessionManager.java
+  s_4f070cf415fa68::t_f8ba62c57b7ecc 1-163
+src/main/java/com/dalogin/persistence/account/AccountManager.java
+  s_4f070cf415fa68::t_2445f794d29d99 1-156
+src/main/java/com/dalogin/servlets/responsemap/RegistrationWithoutVoucherResponses.java
+  h_d154d11af00b83 1-97
+src/main/java/com/dalogin/servlets/requestrecord/ForgotPasswordRequest.java
+  h_d154d11af00b83 1-38
+src/main/java/com/dalogin/servlets/requestrecord/RegistrationWithoutVoucherRequest.java
+  h_d154d11af00b83 1-47
+src/main/java/com/dalogin/servlets/responsemap/PurchaseResponses.java
+  h_d154d11af00b83 1-25
+src/main/java/com/dalogin/persistence/voucher/VoucherManager.java
+  s_4f070cf415fa68::t_7f6fdc78cff663 1-162
+src/main/java/com/dalogin/servlets/responsemap/PasswordResetResponses.java
+  h_d154d11af00b83 1-75
+src/main/java/com/dalogin/client/filter/ClientCallRequestFilter.java
+  s_167d994f1edf73::t_5fd4d5887c3a1e 24
+  s_167d994f1edf73::t_da471f6d84fab1 21-23
+  h_d154d11af00b83 1-20
+src/main/java/com/dalogin/servlets/requestrecord/NewPasswordRequest.java
+  h_d154d11af00b83 1-40
+src/main/java/com/dalogin/persistence/PersistenceOperationException.java
+  s_4f070cf415fa68::t_158af05bde17ba 1-27
+src/main/java/com/dalogin/persistence/devicesession/SessionTokens.java
+  s_4f070cf415fa68::t_54d9f9addaa700 1-8
+src/main/java/com/dalogin/servlets/responsemap/RegistrationSuccess.java
+  h_d154d11af00b83 1-13
+src/main/java/com/dalogin/persistence/support/SqlSupport.java
+  s_4f070cf415fa68::t_1f37f3c47101e7 1-87
+src/main/java/com/dalogin/client/filter/ClientCallResponseFilter.java
+  s_167d994f1edf73::t_e3c2bd4d97a90b 45
+  s_167d994f1edf73::t_0d82640add9186 42-44
+  h_d154d11af00b83 1-41
+src/main/java/com/dalogin/servlets/responsemap/VoucherResponses.java
+  h_d154d11af00b83 1-29
+src/main/java/com/dalogin/servlets/responsemap/LoginSuccess.java
+  h_d154d11af00b83 1-14
+src/main/java/com/dalogin/servlets/responsemap/LoginResponses.java
+  h_d154d11af00b83 1-78
+src/main/java/com/dalogin/servlets/requestrecord/RegistrationRequest.java
+  h_d154d11af00b83 1-50
+src/main/java/com/dalogin/servlets/responsemap/ActiveSessionsResponses.java
+  s_4f070cf415fa68::t_d965dc5f0f3361 1-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b1f49ba479e4ec29f0c327372e52e2b9ce56b9e5",
+  "prompts": {},
+  "humans": {
+    "h_d154d11af00b83": {
+      "author": "GASPAR, GYORGY <gyorgy.gaspar@lhsystems.com>"
+    }
+  },
+  "sessions": {
+    "s_167d994f1edf73": {
+      "agent_id": {
+        "tool": "github-copilot-jetbrains",
+        "id": "1787062152792",
+        "model": "unknown"
+      },
+      "human_author": "GASPAR, GYORGY <gyorgy.gaspar@lhsystems.com>"
+    },
+    "s_4f070cf415fa68": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "1e357a1c-f397-412d-841e-a4f799814c52",
+        "model": "unknown"
+      },
+      "human_author": "GASPAR, GYORGY <gyorgy.gaspar@lhsystems.com>"
+    }
+  }
+}
