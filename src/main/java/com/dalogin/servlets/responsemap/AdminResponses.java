@@ -40,4 +40,12 @@ public final class AdminResponses {
     public static void downstreamBody(HttpServletResponse response, String body) throws IOException {
         writeRaw(response, body);
     }
+
+    public static void newsSettingsDownstream(
+            HttpServletResponse response, int statusCode, String contentType, String body) throws IOException {
+        response.setContentType(contentType);
+        response.setCharacterEncoding(UTF_8);
+        response.setStatus(statusCode);
+        writeRaw(response, body);
+    }
 }

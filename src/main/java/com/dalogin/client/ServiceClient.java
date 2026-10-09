@@ -4,6 +4,7 @@ import com.dalogin.client.filter.RequestFilter;
 import com.dalogin.client.filter.ClientCallRequestFilter;
 import com.dalogin.client.filter.ClientCallResponseFilter;
 import com.dalogin.client.service.Device;
+import com.dalogin.client.service.NewsSettings;
 import com.dalogin.client.service.Purchases;
 import com.dalogin.client.service.User;
 import jakarta.servlet.http.HttpServletRequest;
@@ -79,6 +80,22 @@ public class ServiceClient {
         deviceService = target.proxy(Device.class);
         Response response = deviceService.getData(uuid);
         logOutboundResponse("callGetDevice", "GET", "/rest/device/{uuid}", response.getStatus());
+        return response;
+    }
+
+    public Response callGetNewsScreen() {
+        logOutboundRequest("callGetNewsScreen", "GET", "/rest/news-settings/screen", Map.of());
+        NewsSettings settings = target.proxy(NewsSettings.class);
+        Response response = settings.getNewsScreen();
+        logOutboundResponse("callGetNewsScreen", "GET", "/rest/news-settings/screen", response.getStatus());
+        return response;
+    }
+
+    public Response callPutNewsScreen(String json) {
+        logOutboundRequest("callPutNewsScreen", "PUT", "/rest/news-settings/screen", Map.of());
+        NewsSettings settings = target.proxy(NewsSettings.class);
+        Response response = settings.putNewsScreen(json);
+        logOutboundResponse("callPutNewsScreen", "PUT", "/rest/news-settings/screen", response.getStatus());
         return response;
     }
 

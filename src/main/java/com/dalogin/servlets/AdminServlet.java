@@ -16,6 +16,7 @@ import jakarta.ws.rs.core.Response;
 import org.jboss.logging.Logger;
 
 import java.io.IOException;
+import java.io.StringWriter;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -25,10 +26,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-@WebServlet(urlPatterns = "/admin", name = "AdminServlet")
+@WebServlet(urlPatterns = {"/admin", "/admin/newsSettings/screen"}, name = "AdminServlet")
 public class AdminServlet extends HttpServlet {
     private static final long serialVersionUID = 5570497466931245289L;
     private static final Logger log = Logger.getLogger(AdminServlet.class);
+    private static final String NEWS_SCREEN_PATH = "/admin/newsSettings/screen";
 
     @Inject
     AccountManager accountManager;
@@ -38,7 +40,25 @@ public class AdminServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        if (isNewsSettingsRequest(request)) {
+            response.setHeader("Allow", "GET, PUT");
+            AdminResponses.error(response, 405, "Method not allowed");
+            return;
+        }
         processRequest(request, response);
+    }
+
+    private boolean isNewsSettingsRequest(HttpServletRequest request) {
+        return NEWS_SCREEN_PATH.equals(request.getServletPath()) && request.getPathInfo() == null;
+    }
+
+    @Override
+    protected void doPut(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        if (isNewsSettingsRequest(request)) {
+            processRequest(request, response);
+            return;
+        }
+        super.doPut(request, response);
     }
 
     @Override
@@ -124,7 +144,39 @@ public class AdminServlet extends HttpServlet {
         }
 
         Map<String, String> attributes = buildAttributes(session, user, token2.get(0));
-        callServiceAndRespond(response, request, user, token, attributes);
+        if (isNewsSettingsRequest(request)) {
+            callNewsSettingsAndRespond(response, request, attributes);
+        } else {
+            callServiceAndRespond(response, request, user, token, attributes);
+        }
+    }
+
+    private void callNewsSettingsAndRespond(HttpServletResponse response, HttpServletRequest request,
+                                            Map<String, String> attributes)
+            throws IOException, CertificateException, KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+        ServiceClient client = new ServiceClient(SystemConstants.getServiceUrl() + "/mbook-1", request, attributes);
+        int status;
+        String contentType;
+        String responseBody;
+        try {
+            Response apiResponse;
+            if ("PUT".equals(request.getMethod())) {
+                StringWriter body = new StringWriter();
+                request.getReader().transferTo(body);
+                apiResponse = client.callPutNewsScreen(body.toString());
+            } else {
+                apiResponse = client.callGetNewsScreen();
+            }
+            try (Response upstream = apiResponse) {
+                status = upstream.getStatus();
+                contentType = upstream.getMediaType() == null
+                        ? "application/json" : upstream.getMediaType().toString();
+                responseBody = upstream.hasEntity() ? upstream.readEntity(String.class) : "";
+            }
+        } finally {
+            client.close();
+        }
+        AdminResponses.newsSettingsDownstream(response, status, contentType, responseBody);
     }
 
     private Map<String, String> buildAttributes(HttpSession session, String user, String token2) {
