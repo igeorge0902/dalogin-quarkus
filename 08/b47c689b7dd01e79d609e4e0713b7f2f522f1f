@@ -1,0 +1,33 @@
+src/main/java/com/dalogin/servlets/responsemap/AdminResponses.java
+  s_8ac63eabe36989::t_d3d2f32e8c8395 43-50
+src/main/java/com/dalogin/SystemConstants.java
+  h_d154d11af00b83 6
+src/main/java/com/dalogin/client/service/NewsSettings.java
+  s_8ac63eabe36989::t_d3d2f32e8c8395 1-20
+src/main/java/com/dalogin/client/ServiceClient.java
+  s_8ac63eabe36989::t_d3d2f32e8c8395 7,86-100
+  s_8ac63eabe36989::t_bbab7bc780a6fe 101
+src/main/java/com/dalogin/servlets/AdminServlet.java
+  s_8ac63eabe36989::t_d3d2f32e8c8395 19,29,33,43-47,51-63,147-179
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "08b47c689b7dd01e79d609e4e0713b7f2f522f1f",
+  "prompts": {},
+  "humans": {
+    "h_d154d11af00b83": {
+      "author": "GASPAR, GYORGY <gyorgy.gaspar@lhsystems.com>"
+    }
+  },
+  "sessions": {
+    "s_8ac63eabe36989": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "de0e1230-056f-496f-8009-1934767b5bc3",
+        "model": "unknown"
+      },
+      "human_author": "GASPAR, GYORGY <gyorgy.gaspar@lhsystems.com>"
+    }
+  }
+}
